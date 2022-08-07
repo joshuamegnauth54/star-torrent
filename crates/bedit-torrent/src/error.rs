@@ -8,7 +8,7 @@ use thiserror::Error;
 pub enum ParseTorrentError {
     #[error("Ambiguous info dict (w.r.t. files): {0}")]
     AmbiguousFiles(&'static str),
-    #[error("Bencode serializing/deserializing")]
+    #[error("Bencode serializing/deserializing: {0}")]
     Bencode(#[from] BencodeError),
     #[error("Invalid torrent metainfo version: {0}")]
     InvalidVersion(u8),

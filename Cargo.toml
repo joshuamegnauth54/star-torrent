@@ -1,7 +1,7 @@
 [package]
 name = "benitor"
 description = "Ben + Editor = benitor. Benitor edits torrents, resume files, and configs."
-author = ["Joshua Megnauth <>"]
+authors = ["Joshua Megnauth <>"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"

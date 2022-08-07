@@ -6,6 +6,7 @@ use serde::{
 };
 use serde_bytes::ByteBuf;
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, HashMap},
     num::NonZeroU64,
 };
@@ -36,10 +37,11 @@ pub struct SharedFiles {
     md5sum: Option<String>,
 }
 
+/// An empty str.
 #[repr(transparent)]
-#[derive(Default, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Default, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[serde(transparent)]
-pub struct EmptyString(&'static str);
+pub struct EmptyString(Cow<'static, str>);
 
 /// File info for version 2.0 torrents.
 ///
@@ -189,13 +191,23 @@ pub struct Torrent {
 
 impl Torrent {
     #[inline]
-    pub fn from_str(torrent: &str) -> Result<Self, ParseTorrentError> {
-        serde_bencode::from_str(torrent)?
+    pub fn de_from_str(torrent: &str) -> Result<Self, ParseTorrentError> {
+        serde_bencode::from_str(torrent).map_err(Into::into)
     }
 
     #[inline]
-    pub fn from_bytes(torrent: &[u8]) -> Result<Self, ParseTorrentError> {
-        serde_bencode::from_bytes(torrent)?
+    pub fn de_from_bytes(torrent: &[u8]) -> Result<Self, ParseTorrentError> {
+        serde_bencode::from_bytes(torrent).map_err(Into::into)
+    }
+
+    #[inline]
+    pub fn se_to_string(&self) -> Result<String, ParseTorrentError> {
+        serde_bencode::to_string(self).map_err(Into::into)
+    }
+
+    #[inline]
+    pub fn se_to_bytes(&self) -> Result<Vec<u8>, ParseTorrentError> {
+        serde_bencode::to_bytes(self).map_err(Into::into)
     }
 
     /// Optional torrent validation beyond serialization.
@@ -225,14 +237,11 @@ impl Torrent {
             match (
                 torrent.info.length.is_some(),
                 torrent.info.files.is_some(),
-                torrent.info.file_tree,
+                torrent.info.file_tree.is_some(),
             ) {
                 (true, true, false) => Err(ParseTorrentError::AmbiguousFiles("length and files")),
                 (true, false, true) => {
                     Err(ParseTorrentError::AmbiguousFiles("length and file_tree"))
-                }
-                (true, false, true) => {
-                    Err(ParseTorrentError::AmbiguousFiles("files and file_tree"))
                 }
                 (false, true, true) => {
                     Err(ParseTorrentError::AmbiguousFiles("files and file tree"))
@@ -263,7 +272,7 @@ impl Torrent {
         }
     }
 
-    fn bool_to_int<'se, S>(private: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
+    fn bool_to_int<S>(private: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
