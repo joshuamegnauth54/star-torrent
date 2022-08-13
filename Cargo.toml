@@ -4,7 +4,13 @@ description = "Ben + Editor = benitor. Benitor edits torrents, resume files, and
 authors = ["Joshua Megnauth <>"]
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/joshuamegnauth54/benitor/"
 license = "MIT"
+keywords = ["torrent", "parse", "cross-platform", "gui", "p2p"]
+categories = ["config", "parsing"]
+
+[profile.release]
+lto = true
 
 [workspace]
 members = ["crates/*"]
