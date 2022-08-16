@@ -11,9 +11,10 @@ categories = ["config", "parsing"]
 
 [dependencies]
 either = { version = "1.7", features = ["serde"] }
+itertools = "0.10.3"
+log = "0.4"
 serde = { version = "1.0.140", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
-log = "0.4"
+smallvec = { version = "1.9.0", features = ["union"] }
 thiserror = "1.0"
-unicode-segmentation = "1.9.0"
