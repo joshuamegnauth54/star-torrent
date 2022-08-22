@@ -4,6 +4,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 use serde_bytes::ByteBuf;
+use serde_with::skip_serializing_none;
 use std::{collections::HashMap, num::NonZeroU64};
 
 use super::torrent_files::{FileTree, SharedFiles};
@@ -27,6 +28,7 @@ pub struct Node((String, u32));
 ///
 /// The base structure is defined in [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html).
 /// Extensions to BEP-0003 are defined in [BEP-0052](https://www.bittorrent.org/beps/bep_0052.html).
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Info {
     /// Files shared by the torrent.
@@ -78,6 +80,7 @@ pub struct Info {
 /// Torrent metadata
 ///
 /// Defined in [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html) and [BEP-0052](https://www.bittorrent.org/beps/bep_0052.html).
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Torrent {
     /// Tracker URL.
@@ -124,7 +127,7 @@ pub struct Torrent {
     pub publisher_url: Option<String>,
     /// Signatures for signed torrents.
     #[serde(default)]
-    pub signatures: HashMap<String, Signature>,
+    pub signatures: Option<HashMap<String, Signature>>,
 }
 
 impl Torrent {
@@ -220,5 +223,44 @@ impl Torrent {
             Some(false) => serializer.serialize_some(&0),
             None => serializer.serialize_none(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Torrent;
+    use serde::de::{value::Error as DeError, Error as SerdeError, IntoDeserializer};
+    use std::error::Error;
+
+    #[test]
+    fn bool_from_int_valid() -> Result<(), Box<dyn Error>> {
+        let states = [("i0e", false), ("i1e", true)];
+
+        for (value, expected) in states {
+            let mut deserializer = serde_bencode::Deserializer::new(value.as_bytes());
+            let maybe_bool = Torrent::bool_from_int(&mut deserializer)?
+                .ok_or_else(|| DeError::custom("Expected Some({expected})"))?;
+
+            if maybe_bool != expected {
+                Err(DeError::custom("Expected {expected}"))?
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Value: integer `14` (expected: `zero or one`)")]
+    fn bool_from_int_invalid() {
+        let mut deserializer = serde_bencode::Deserializer::new("i14e".as_bytes());
+        Torrent::bool_from_int(&mut deserializer)
+            .expect("Invalid Value: integer `14` (expected: `zero or one`)");
+    }
+
+    #[test]
+    fn bool_from_int_none() {
+        let deserializer: serde::de::value::StrDeserializer<'static, DeError> =
+            "".into_deserializer();
+        // Note to self...doesn't work yet.
+        Torrent::bool_from_int(deserializer).unwrap();
     }
 }

@@ -1,3 +1,10 @@
+//! Type safe torrent file attributes.
+//!
+//! [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html) defines extra metadata for torrent files.
+//! One of these additions is `attr`, a variable length string that lists the attributes of a file.
+//! [FileAttribute] wraps the individual attributes while [TorrentFileAttributes] wraps the string.
+//! Both of these types verify the input as well as provide serialization.
+
 use itertools::Itertools;
 use serde::{
     de::{value::Error as DeError, Error as DeErrorTrait},
@@ -21,7 +28,7 @@ const FILE_ATTRIBUTE_EXPECTED: [&str; 4] = ["x", "h", "p", "l"];
 ///
 /// Extended file properties are defined in [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html).
 /// Counter to the spec, conversions from [char] and [str] slices are currently fallible. However this may change in the future.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug)]
 pub enum FileAttribute {
     Executable,
     Hidden,
@@ -101,12 +108,32 @@ impl<'de> Deserialize<'de> for FileAttribute {
 
 /// Multiple [FileAttribute]`s wrapped for serialization and deserialization.
 ///
-/// The `attr` field is stored as a bencoded string as per [Bep-047](https://www.bittorrent.org/beps/bep_0047.html).
+/// The `attr` field is stored as a bencoded string as per [BEP-047](https://www.bittorrent.org/beps/bep_0047.html).
 /// [TorrentFileAttributes] wraps an implemention defined vector (currently [SmallVec]) of [FileAttribute]s that deserializes
 /// to and serializes from a [String].
 ///
+/// # Examples
+/// Deserialize to a strongly typed `struct` and back to a [String].
+/// ```
+/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+/// use serde::{Deserialize, Serialize};
+///
+/// let attrs = "2:lx";
+/// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
+/// let attrs_se = serde_bencode::to_string(&torrent_attrs)?;
+/// assert_eq!(attrs, attrs_se);
+/// # Ok::<(), ParseTorrentError>(())
 /// ```
 ///
+/// Deserialization drops duplicates and sorts the result.
+/// ```
+/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+/// use serde::Deserialize;
+///
+/// let attrs = "23:plxhhxXpPxlLxpphXXXhlLL";
+/// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
+/// assert_eq!("hlpx", torrent_attrs.to_string());
+/// # Ok::<(), ParseTorrentError>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct TorrentFileAttributes(SmallVec<[FileAttribute; 4]>);
@@ -132,6 +159,7 @@ impl<'de> Deserialize<'de> for TorrentFileAttributes {
         let attr = String::deserialize(deserializer)?;
         let attrs_parsed = attr
             .chars()
+            .map(|ch| ch.to_ascii_lowercase())
             // Sort so that I could potentially intern the Strings produced during deserialization in the future.
             .sorted()
             // Dedup for the same reason as sorting - plus there is no reason for dupes here.
