@@ -3,6 +3,7 @@ use serde::{
     de::{Error as DeError, Unexpected},
     Deserialize, Deserializer, Serialize, Serializer,
 };
+use serde_bencode::value::Value;
 use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
 use std::{collections::HashMap, num::NonZeroU64};
@@ -16,11 +17,11 @@ use super::ParseTorrentError;
 // https://github.com/toby/serde-bencode/blob/master/examples/parse_torrent.rs
 // https://wiki.theory.org/BitTorrentSpecification
 
-/// A node is (host, port) pair that can be provided through DHT.
+/// A [`Node`] is (host, port) pair that can be provided through DHT.
 ///
 /// [BEP-0005](https://www.bittorrent.org/beps/bep_0005.html)
 ///
-/// Nodes are not limited to socket addresses but may also be URLs.
+/// [`Node`]s are not limited to socket addresses but may also be URLs.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Node((String, u32));
 
@@ -77,7 +78,7 @@ pub struct Info {
     pub root_hash: Option<String>,
 }
 
-/// Torrent metadata
+/// Torrent metadata such as the announce urls or DHT [`Node`]s.
 ///
 /// Defined in [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html) and [BEP-0052](https://www.bittorrent.org/beps/bep_0052.html).
 #[skip_serializing_none]
@@ -202,14 +203,28 @@ impl Torrent {
     where
         D: Deserializer<'de>,
     {
-        match Option::<u8>::deserialize(deserializer)? {
-            Some(0) => Ok(Some(false)),
-            Some(1) => Ok(Some(true)),
-            None => Ok(None),
-            nonbool => Err(DeError::invalid_value(
-                Unexpected::Unsigned(nonbool.unwrap_or_default() as u64),
-                &"zero or one",
-            )),
+        match Value::deserialize(deserializer)? {
+            Value::Int(i) => match i {
+                0 => Ok(Some(false)),
+                1 => Ok(Some(true)),
+                nonbool => Err(DeError::invalid_value(
+                    Unexpected::Unsigned(nonbool as u64),
+                    &"zero or one",
+                )),
+            },
+            Value::Bytes(maybe_none) if maybe_none.is_empty() => Ok(None),
+            wrong => {
+                let unexpected = match wrong {
+                    Value::List(_) => Unexpected::Seq,
+                    Value::Dict(_) => Unexpected::Map,
+                    Value::Bytes(bytes) if !bytes.is_empty() => {
+                        Unexpected::Other("&[u8] that's not empty")
+                    }
+                    _ => unreachable!("Value::Int and Value::Bytes([]) were checked earlier."),
+                };
+
+                Err(DeError::invalid_type(unexpected, &"zero or one"))
+            }
         }
     }
 
