@@ -135,6 +135,16 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// assert_eq!("hlpx", torrent_attrs.to_string());
 /// # Ok::<(), ParseTorrentError>(())
 /// ```
+///
+/// [TryFrom] is implemented for [TorrentFileAttributes].
+/// ```
+/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+///
+/// let attrs = "hlpx";
+/// let torrent_attrs: TorrentFileAttributes = attrs.try_into()?;
+/// assert_eq!("hlpx", torrent_attrs.to_string());
+/// # Ok::<(), ParseTorrentError>(())
+/// ```
 #[derive(Debug, Clone)]
 pub struct TorrentFileAttributes(SmallVec<[FileAttribute; 4]>);
 
@@ -150,14 +160,13 @@ impl Display for TorrentFileAttributes {
     }
 }
 
-impl<'de> Deserialize<'de> for TorrentFileAttributes {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        // TODO: Figure out how to deserialize as a borrowed str.
-        let attr = String::deserialize(deserializer)?;
-        let attrs_parsed = attr
+impl TryFrom<&str> for TorrentFileAttributes {
+    type Error = DeError;
+
+    // Convert a &str containing any case insensitive combination of 'x', 'h', 'p', 'l'
+    // to a vector of [FileAttribute].
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let attrs_parsed = value
             .chars()
             .map(|ch| ch.to_ascii_lowercase())
             // Sort so that I could potentially intern the Strings produced during deserialization in the future.
@@ -165,10 +174,22 @@ impl<'de> Deserialize<'de> for TorrentFileAttributes {
             // Dedup for the same reason as sorting - plus there is no reason for dupes here.
             .dedup()
             .map(|maybe_attr| maybe_attr.try_into())
-            .collect::<Result<SmallVec<_>, _>>()
-            .map_err(|_| D::Error::unknown_variant(&attr, &FILE_ATTRIBUTE_EXPECTED))?;
+            .collect::<Result<SmallVec<_>, _>>()?;
 
         Ok(TorrentFileAttributes(attrs_parsed))
+    }
+}
+
+impl<'de> Deserialize<'de> for TorrentFileAttributes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // TODO: Figure out how to deserialize as a borrowed str.
+        let attr = String::deserialize(deserializer)?;
+        attr.as_str()
+            .try_into()
+            .map_err(|_| D::Error::unknown_variant(&attr, &FILE_ATTRIBUTE_EXPECTED))
     }
 }
 

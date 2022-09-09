@@ -244,7 +244,10 @@ impl Torrent {
 #[cfg(test)]
 mod tests {
     use super::Torrent;
-    use serde::de::{value::Error as DeError, Error as SerdeError, IntoDeserializer};
+    use serde::de::{
+        value::{Error as DeError, StrDeserializer},
+        Error as SerdeError, IntoDeserializer,
+    };
     use std::error::Error;
 
     #[test]
@@ -273,9 +276,21 @@ mod tests {
 
     #[test]
     fn bool_from_int_none() {
-        let deserializer: serde::de::value::StrDeserializer<'static, DeError> =
-            "".into_deserializer();
-        // Note to self...doesn't work yet.
+        let deserializer: StrDeserializer<'static, DeError> = "".into_deserializer();
         Torrent::bool_from_int(deserializer).unwrap();
+    }
+
+    #[test]
+    fn int_from_bool() -> Result<(), serde_bencode::Error> {
+        let mut serializer = serde_bencode::Serializer::new();
+        Torrent::bool_to_int(&Some(true), &mut serializer)?;
+
+        let bytes_ser = serializer.into_vec();
+        assert!(
+            bytes_ser == "i1e".as_bytes(),
+            "Some(true) wasn't serialized"
+        );
+
+        Ok(())
     }
 }
