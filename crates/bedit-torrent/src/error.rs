@@ -1,7 +1,6 @@
-use std::num::NonZeroU64;
-
 use serde::de::Unexpected;
 use serde_bencode::{value::Value, Error as BencodeError};
+use std::num::NonZeroU64;
 use thiserror::Error;
 
 /// Torrent serializing and deserializing errors.
@@ -23,6 +22,6 @@ pub(crate) fn value_to_unexpected(value: &Value) -> Unexpected {
         Value::Int(i) => Unexpected::Signed(*i),
         Value::List(_) => Unexpected::Seq,
         Value::Bytes(bytes) => Unexpected::Bytes(bytes.as_slice()),
-        Value::Dict(dict) => Unexpected::Map,
+        Value::Dict(_) => Unexpected::Map,
     }
 }

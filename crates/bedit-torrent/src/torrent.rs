@@ -32,9 +32,10 @@ pub struct Node((String, u32));
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Info {
-    /// Files shared by the torrent.
+    /// Files shared by version 1 or hybrid torrents.
     #[serde(default)]
     pub files: Option<Vec<SharedFiles>>,
+    /// Version 2 or hybrid styled file dictionaries.
     #[serde(default, rename = "file tree")]
     pub file_tree: Option<FileTree>,
     /// Length of the file in bytes.

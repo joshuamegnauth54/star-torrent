@@ -1,4 +1,9 @@
 //! Types representing files shared by a torrent.
+//!
+//! [SharedFiles] is for version 1 or hybrid torrents.
+//! [FileTree] is for version 2 or hybrid torrents.
+//!
+//! Compared to version 1 torrents, version 2 torrents may be smaller in size due to [FileTree]s deduplicating paths.
 
 //use either::Either;
 use itertools::{Either, Itertools};
@@ -67,6 +72,7 @@ pub struct FileTreeInfo {
     pub pieces_root: Option<ByteBuf>,
 }
 
+/*
 impl TryFrom<HashMap<String, Value>> for FileTreeInfo {
     type Error = DeError;
 
@@ -150,15 +156,48 @@ impl TryFrom<HashMap<String, Value>> for FileTreeInfo {
         })
     }
 }
+*/
 
-#[derive(Debug)]
+/// A file or a directory in version 2 [FileTree]s.
+///
+/// # Examples
+/// [FileTreeEntry] should be deserialized as part of the overall torrent parsing process.
+///
+/// ```
+/// use bedit_torrent::{FileTreeEntry, ParseTorrentError};
+///
+/// let file = "d9:cat_videod0:d6:lengthi1024000000e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeee";
+/// let file_entry: FileEntry = serde_bencode::from_str(file)?:
+///
+/// # Ok::<(), ParseTorrentError>(())
+/// ```
+#[derive(Debug, Deserialize, Serialize)]
 #[repr(transparent)]
-struct FileTreeEntry(pub Either<FileTreeInfo, FileTree>);
+#[serde(transparent)]
+pub struct FileTreeEntry(
+    #[serde(with = "either::serde_untagged")] pub either::Either<FileTreeInfo, FileTree>,
+);
 
+/*
 struct FileTreeEntryTemp(Either<FileTreeInfo, HashMap<String, Value>>);
 
+impl TryFrom<Value> for FileTreeEntryTemp {
+    type Error = DeError;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if let Value::Dict(map) = value {
+            map.try_into()
+        } else {
+            Err(DeError::invalid_type(
+                value_to_unexpected(&value),
+                &"dictionary of files and directories",
+            ))
+        }
+    }
+}
+
 impl TryFrom<HashMap<String, Value>> for FileTreeEntryTemp {
-    type Error = ParseTorrentError;
+    type Error = DeError;
 
     fn try_from(value: HashMap<String, Value>) -> Result<Self, Self::Error> {
         match value.iter().map(|(name, _)| name.as_str()).next() {
@@ -173,7 +212,7 @@ impl TryFrom<HashMap<String, Value>> for FileTreeEntryTemp {
                     Err(DeError::invalid_length(
                         value.len(),
                         &"map with an empty string as its only key",
-                    ))?
+                    ))
                 }
             }
             _ => Ok(FileTreeEntryTemp(Either::Right(value))),
@@ -195,23 +234,27 @@ impl<'de> Deserialize<'de> for FileTree {
             node: BTreeMap::default(),
         };
 
-        for (mut name, node) in dirs.pop_front() {
-            let entry = node.try_into()?;
+        while let Some(cur_dir) = dirs.pop_front() {
+            for (mut name, node) in cur_dir {
+                let entry: FileTreeEntryTemp = node.try_into()?;
 
-            match entry.0 {
-                Either::Left(file) => {
-                    while tree.node.contains_key(&name) {
-                        error!("[deserialize] Torrent has duplicate file: {name}; renaming.");
-                        name += "_dup";
+                match entry.0 {
+                    Either::Left(file) => {
+                        while tree.node.contains_key(&name) {
+                            error!("[deserialize] Torrent has duplicate file: {name}; renaming.");
+                            name += "_dup";
+                        }
+                        tree.node.insert(name, file);
                     }
-                    tree.node.insert(name, file);
-                }
-                Either::Right(dir) => {
-                    while tree.node.contains_key(&name) {
-                        error!("[deserialize] Torrent has duplicate directory: {name}; renaming.");
-                        name += "_dup";
+                    Either::Right(dir) => {
+                        while tree.node.contains_key(&name) {
+                            error!(
+                                "[deserialize] Torrent has duplicate directory: {name}; renaming."
+                            );
+                            name += "_dup";
+                        }
+                        dirs.push_front(dir);
                     }
-                    dirs.push_front(dir);
                 }
             }
         }
@@ -219,9 +262,11 @@ impl<'de> Deserialize<'de> for FileTree {
         Ok(tree)
     }
 }
+*/
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[repr(transparent)]
+#[serde(transparent)]
 pub struct FileTree {
     pub node: BTreeMap<String, FileTreeEntry>,
 }
@@ -305,17 +350,24 @@ impl<'de> Deserialize<'de> for FileTree {
 
 #[cfg(test)]
 mod tests {
+    use super::FileTree;
     use serde::Deserialize;
     use serde_bencode::Deserializer;
 
-    use super::FileTree;
+    #[derive(Deserialize)]
+    struct OuterTest {
+        #[allow(unused)]
+        #[serde(rename = "file tree")]
+        info: FileTree,
+    }
 
     #[test]
     fn filetree_from_bencode() {
-        // From BEP-0052
-        let bencode = "d4:infod9:file treed4:dir1d4:dir2d9:fileA.txtd0:d5:lengthi1024e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeee";
+        // Copied directly from BEP-0052 with a typo fixed.
+        // The original info dict has d5:length but it should be d6:length
+        let bencode = "d4:infod9:file treed4:dir1d4:dir2d9:fileA.txtd0:d6:lengthi1024e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeee";
 
         let mut deserializer = Deserializer::new(bencode.as_bytes());
-        FileTree::deserialize(&mut deserializer).unwrap();
+        OuterTest::deserialize(&mut deserializer).unwrap();
     }
 }
