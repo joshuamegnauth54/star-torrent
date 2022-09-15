@@ -1,11 +1,13 @@
 mod error;
 mod fileattributes;
+mod files;
+mod info;
+mod signature;
 mod torrent;
-mod torrent_files;
-mod torrent_sign;
 
 pub use error::ParseTorrentError;
 pub use fileattributes::{FileAttribute, TorrentFileAttributes};
-pub use torrent::{Info, Node, Torrent};
-pub use torrent_files::{EmptyString, FileTree, FileTreeInfo, SharedFiles};
-pub use torrent_sign::{SignInfo, Signature};
+pub use files::{FileTree, FileTreeEntry, FileTreeInfo, SharedFiles};
+pub use info::{Hybrid, Info, MetaV1, MetaV2};
+pub use signature::{SignInfo, Signature};
+pub use torrent::{Node, Torrent};

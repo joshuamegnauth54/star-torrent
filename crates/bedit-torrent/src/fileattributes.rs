@@ -5,12 +5,12 @@
 //! [FileAttribute] wraps the individual attributes while [TorrentFileAttributes] wraps the string.
 //! Both of these types verify the input as well as provide serialization.
 
+use arrayvec::ArrayVec;
 use itertools::Itertools;
 use serde::{
     de::{value::Error as DeError, Error as DeErrorTrait},
     Deserialize, Serialize,
 };
-use smallvec::SmallVec;
 use std::fmt::{self, Display, Formatter};
 
 // Valid, lower cased file attributes.
@@ -109,7 +109,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// Multiple [FileAttribute]`s wrapped for serialization and deserialization.
 ///
 /// The `attr` field is stored as a bencoded string as per [BEP-047](https://www.bittorrent.org/beps/bep_0047.html).
-/// [TorrentFileAttributes] wraps an implemention defined vector (currently [SmallVec]) of [FileAttribute]s that deserializes
+/// [TorrentFileAttributes] wraps an implemention defined vector (currently an [ArrayVec]) of [FileAttribute]s that deserializes
 /// to and serializes from a [String].
 ///
 /// # Examples
@@ -146,7 +146,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// # Ok::<(), ParseTorrentError>(())
 /// ```
 #[derive(Debug, Clone)]
-pub struct TorrentFileAttributes(SmallVec<[FileAttribute; 4]>);
+pub struct TorrentFileAttributes(ArrayVec<FileAttribute, 4>);
 
 impl Display for TorrentFileAttributes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -174,7 +174,7 @@ impl TryFrom<&str> for TorrentFileAttributes {
             // Dedup for the same reason as sorting - plus there is no reason for dupes here.
             .dedup()
             .map(|maybe_attr| maybe_attr.try_into())
-            .collect::<Result<SmallVec<_>, _>>()?;
+            .collect::<Result<ArrayVec<_, 4>, _>>()?;
 
         Ok(TorrentFileAttributes(attrs_parsed))
     }
