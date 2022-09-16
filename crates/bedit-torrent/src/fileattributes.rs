@@ -5,6 +5,7 @@
 //! [FileAttribute] wraps the individual attributes while [TorrentFileAttributes] wraps the string.
 //! Both of these types verify the input as well as provide serialization.
 
+// Using ArrayVec: https://nnethercote.github.io/perf-book/heap-allocations.html
 use arrayvec::ArrayVec;
 use itertools::Itertools;
 use serde::{
@@ -57,7 +58,7 @@ impl TryFrom<&str> for FileAttribute {
     type Error = DeError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        // No to_lowercase() because it returns a String.
+        // Not using to_lowercase() because it returns a String.
         match value {
             "x" | "X" => Ok(Self::Executable),
             "h" | "H" => Ok(Self::Hidden),
@@ -80,7 +81,7 @@ impl From<FileAttribute> for &str {
 }
 
 impl Serialize for FileAttribute {
-    #[inline]
+    #[inline(always)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -104,7 +105,9 @@ impl<'de> Deserialize<'de> for FileAttribute {
     }
 }
 
+// ********************************
 // TorrentFileAttributes and impls.
+// ********************************
 
 /// Multiple [FileAttribute]`s wrapped for serialization and deserialization.
 ///
@@ -115,35 +118,38 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// # Examples
 /// Deserialize to a strongly typed `struct` and back to a [String].
 /// ```
-/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+/// use bedit_torrent::TorrentFileAttributes;
 /// use serde::{Deserialize, Serialize};
+/// use serde_bencode::Error;
 ///
 /// let attrs = "2:lx";
 /// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
 /// let attrs_se = serde_bencode::to_string(&torrent_attrs)?;
 /// assert_eq!(attrs, attrs_se);
-/// # Ok::<(), ParseTorrentError>(())
+/// # Ok::<(), Error>(())
 /// ```
 ///
 /// Deserialization drops duplicates and sorts the result.
 /// ```
-/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+/// use bedit_torrent::TorrentFileAttributes;
 /// use serde::Deserialize;
+/// use serde_bencode::Error;
 ///
 /// let attrs = "23:plxhhxXpPxlLxpphXXXhlLL";
 /// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
 /// assert_eq!("hlpx", torrent_attrs.to_string());
-/// # Ok::<(), ParseTorrentError>(())
+/// # Ok::<(), Error>(())
 /// ```
 ///
 /// [TryFrom] is implemented for [TorrentFileAttributes].
 /// ```
-/// use bedit_torrent::{TorrentFileAttributes, ParseTorrentError};
+/// use bedit_torrent::TorrentFileAttributes;
+/// use serde_bencode::Error;
 ///
 /// let attrs = "hlpx";
 /// let torrent_attrs: TorrentFileAttributes = attrs.try_into()?;
 /// assert_eq!("hlpx", torrent_attrs.to_string());
-/// # Ok::<(), ParseTorrentError>(())
+/// # Ok::<(), Error>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct TorrentFileAttributes(ArrayVec<FileAttribute, 4>);
@@ -194,7 +200,7 @@ impl<'de> Deserialize<'de> for TorrentFileAttributes {
 }
 
 impl Serialize for TorrentFileAttributes {
-    #[inline]
+    #[inline(always)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

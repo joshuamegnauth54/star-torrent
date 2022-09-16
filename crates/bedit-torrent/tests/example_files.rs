@@ -18,7 +18,7 @@ fn test_files() {
                 entry.path()
             )
         });
-        _ = Torrent::de_from_bytes(&contents).unwrap_or_else(|error| {
+        let _torrent: Torrent = serde_bencode::from_bytes(&contents).unwrap_or_else(|error| {
             panic!(
                 "Torrent file failed to deserialize\nPath: {:?}\nError: {error}",
                 entry.path()

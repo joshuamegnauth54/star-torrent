@@ -1,9 +1,7 @@
-use log::warn;
+use super::{signature::Signature, Info};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
-
-use super::{signature::Signature, Info, ParseTorrentError};
 
 // Based on BEPs as well as:
 // https://en.wikipedia.org/wiki/Torrent_file#File_structure
@@ -67,7 +65,7 @@ pub struct Torrent {
 }
 
 impl Torrent {
-    #[inline]
+    /*#[inline]
     pub fn de_from_str(torrent: &str) -> Result<Self, ParseTorrentError> {
         serde_bencode::from_str(torrent).map_err(Into::into)
     }
@@ -87,7 +85,6 @@ impl Torrent {
         serde_bencode::to_bytes(self).map_err(Into::into)
     }
 
-    /*
     /// Optional torrent validation beyond serialization.
     ///
     /// Torrents may be in an inconsistent state such as missing optional fields that are

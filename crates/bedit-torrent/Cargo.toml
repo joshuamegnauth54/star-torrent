@@ -2,7 +2,7 @@
 name = "bedit-torrent"
 description = "Helper structs for serializing and deserializing torrents for benitor."
 authors = ["Joshua Megnauth <>"]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/joshuamegnauth54/benitor/"
 license = "MIT"
@@ -18,7 +18,6 @@ serde = { version = "1.0.140", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
 serde_with = "2.0.0"
-thiserror = "1.0"
 
 [dev-dependencies]
 serde_test = "1.0.144"

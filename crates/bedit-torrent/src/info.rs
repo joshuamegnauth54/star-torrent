@@ -1,9 +1,9 @@
 use super::files::{FileTree, SharedFiles};
+use log::debug;
 use serde::{
     de::{Error as DeError, Unexpected},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use serde_bencode::value::Value;
 use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
 use std::num::{NonZeroU64, NonZeroU8};
@@ -11,12 +11,18 @@ use std::num::{NonZeroU64, NonZeroU8};
 /// Metainfo on files shared by torrents.
 ///
 /// The base structure is defined in [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html).
-/// Extensions to BEP-0003 are defined in [BEP-0052](https://www.bittorrent.org/beps/bep_0052.html).
+/// Version 2.0 extensions to BEP-0003 are defined in [BEP-0052](https://www.bittorrent.org/beps/bep_0052.html).
+///
+/// More torrent versions may be added in the future so [Info] is non-exhaustive.
+#[non_exhaustive]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Info {
+    /// Meta version 1
     MetaV1(MetaV1),
+    /// Meta version 2
     MetaV2(MetaV2),
+    /// Backwards compatible amalgamate of all versions.
     Hybrid(Hybrid),
 }
 
@@ -27,7 +33,7 @@ pub struct MetaV1 {
     #[serde(default)]
     pub files: Option<Vec<SharedFiles>>,
     #[serde(default)]
-    pub length: Option<u64>,
+    pub length: Option<NonZeroU64>,
     #[serde(default)]
     pub md5sum: Option<String>,
     pub name: String,
@@ -39,7 +45,7 @@ pub struct MetaV1 {
         deserialize_with = "bool_from_int",
         serialize_with = "bool_to_int"
     )]
-    pub private: Option<bool>,
+    pub private: bool,
     #[serde(default, rename = "root hash")]
     pub root_hash: Option<String>,
 }
@@ -53,6 +59,12 @@ pub struct MetaV2 {
     pub meta_version: NonZeroU8,
     #[serde(rename = "piece length")]
     pub piece_length: NonZeroU64,
+    #[serde(
+        default,
+        deserialize_with = "bool_from_int",
+        serialize_with = "bool_to_int"
+    )]
+    pub private: bool,
 }
 
 /// Metainfo on file(s) shared by hybrid torrents.
@@ -71,7 +83,7 @@ pub struct Hybrid {
     /// Length of the file in bytes.
     /// This is present if the torrent only shares one file.
     #[serde(default)]
-    pub length: Option<u64>,
+    pub length: Option<NonZeroU64>,
     /// Torrent file meta version
     ///
     /// This is specified in BEP-0052 which revises the original torrent format.
@@ -106,7 +118,7 @@ pub struct Hybrid {
         deserialize_with = "bool_from_int",
         serialize_with = "bool_to_int"
     )]
-    pub private: Option<bool>,
+    pub private: bool,
     /// Merkle tree root hash.
     ///
     /// [BEP-0030](https://www.bittorrent.org/beps/bep_0030.html) adds Merkle trees to reduce torrent file
@@ -116,46 +128,34 @@ pub struct Hybrid {
     pub root_hash: Option<String>,
 }
 
-/// Deserialize Option<u8> to Option<bool>.
-fn bool_from_int<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+/// Deserialize u8 to bool.
+fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
-    match Value::deserialize(deserializer)? {
-        Value::Int(i) => match i {
-            0 => Ok(Some(false)),
-            1 => Ok(Some(true)),
+    match u8::deserialize(deserializer) {
+        Ok(maybe_bool) => match maybe_bool {
+            0 => Ok(false),
+            1 => Ok(true),
             nonbool => Err(DeError::invalid_value(
                 Unexpected::Unsigned(nonbool as u64),
                 &"zero or one",
             )),
         },
-        Value::Bytes(maybe_none) if maybe_none.is_empty() => Ok(None),
-        wrong => {
-            let unexpected = match wrong {
-                Value::List(_) => Unexpected::Seq,
-                Value::Dict(_) => Unexpected::Map,
-                Value::Bytes(bytes) if !bytes.is_empty() => {
-                    Unexpected::Other("&[u8] that's not empty")
-                }
-                _ => unreachable!("Value::Int and Value::Bytes([]) were checked earlier."),
-            };
-
-            Err(DeError::invalid_type(unexpected, &"zero or one"))
+        Err(error) => {
+            debug!(target: "bedit-torrent::info::bool_from_int", "Deserializing `private` failed which most likely means the field doesn't exist. Documenting anyways.\nError: {error}");
+            Ok(false)
         }
     }
 }
 
-/// Serialize Option<bool> to Option<u8>.
-fn bool_to_int<S>(private: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
+/// Serialize bool to u8.
+#[inline]
+fn bool_to_int<S>(private: &bool, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    match private {
-        Some(true) => serializer.serialize_some(&1),
-        Some(false) => serializer.serialize_some(&0),
-        None => serializer.serialize_none(),
-    }
+    serializer.serialize_u8(*private as u8)
 }
 
 #[cfg(test)]
@@ -173,8 +173,7 @@ mod tests {
 
         for (value, expected) in states {
             let mut deserializer = serde_bencode::Deserializer::new(value.as_bytes());
-            let maybe_bool = bool_from_int(&mut deserializer)?
-                .ok_or_else(|| DeError::custom("Expected Some({expected})"))?;
+            let maybe_bool = bool_from_int(&mut deserializer)?;
 
             if maybe_bool != expected {
                 Err(DeError::custom("Expected {expected}"))?
@@ -200,7 +199,7 @@ mod tests {
     #[test]
     fn int_from_bool() -> Result<(), serde_bencode::Error> {
         let mut serializer = serde_bencode::Serializer::new();
-        bool_to_int(&Some(true), &mut serializer)?;
+        bool_to_int(&true, &mut serializer)?;
 
         let bytes_ser = serializer.into_vec();
         assert!(

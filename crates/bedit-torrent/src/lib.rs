@@ -1,11 +1,11 @@
-mod error;
+//! `bedit-torrent` provides strongly typed data structures for serializing and deserializing torrents.
+
 mod fileattributes;
 mod files;
 mod info;
 mod signature;
 mod torrent;
 
-pub use error::ParseTorrentError;
 pub use fileattributes::{FileAttribute, TorrentFileAttributes};
 pub use files::{FileTree, FileTreeEntry, FileTreeInfo, SharedFiles};
 pub use info::{Hybrid, Info, MetaV1, MetaV2};

@@ -5,27 +5,14 @@
 //!
 //! Compared to version 1 torrents, version 2 torrents may be smaller in size due to [FileTree]s deduplicating paths.
 
-//use either::Either;
-use itertools::{Either, Itertools};
-use log::{debug, error};
-use serde::{
-    de::{value::Error as DeError, Error as DeErrorTrait, Unexpected},
-    Deserialize, Serialize,
-};
-use serde_bencode::value::Value;
+use super::fileattributes::TorrentFileAttributes;
+use either::Either;
+use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
-use std::{
-    borrow::Cow,
-    collections::{BTreeMap, HashMap, VecDeque},
-    num::NonZeroU64,
-};
+use std::{collections::BTreeMap, num::NonZeroU64};
 
-use crate::error::{value_to_unexpected, ParseTorrentError};
-
-use super::fileattributes::TorrentFileAttributes;
-
-/// Files shared by the torrent if multiple.
+/// Files shared by the torrent if multiple as per meta version 1.
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -72,20 +59,21 @@ pub struct FileTreeInfo {
 /// [FileTreeEntry] should be deserialized as part of the overall torrent parsing process.
 ///
 /// ```
-/// use bedit_torrent::{FileTreeEntry, ParseTorrentError};
+/// use bedit_torrent::FileTreeEntry;
+/// use serde_bencode::Error;
 ///
 /// let file_de = "d9:cat_videod0:d6:lengthi1024000000e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeee";
 /// let file_entry: FileTreeEntry = serde_bencode::from_str(file_de)?;
 /// let file_se = serde_bencode::to_string(&file_entry)?;
 /// assert_eq!(file_de, file_se);
 ///
-/// # Ok::<(), ParseTorrentError>(())
+/// # Ok::<(), Error>(())
 /// ```
 #[derive(Debug, Deserialize, Serialize)]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct FileTreeEntry(
-    #[serde(with = "either::serde_untagged")] pub either::Either<FileTreeInfo, FileTree>,
+    #[serde(with = "either::serde_untagged")] pub Either<FileTreeInfo, FileTree>,
 );
 
 /*
