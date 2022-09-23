@@ -8,10 +8,7 @@
 // Using ArrayVec: https://nnethercote.github.io/perf-book/heap-allocations.html
 use arrayvec::ArrayVec;
 use itertools::Itertools;
-use serde::{
-    de::{value::Error as DeError, Error as DeErrorTrait},
-    Deserialize, Serialize,
-};
+use serde::{de::Error as DeErrorTrait, Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 // Valid, lower cased file attributes.
@@ -38,7 +35,7 @@ pub enum FileAttribute {
 }
 
 impl TryFrom<char> for FileAttribute {
-    type Error = DeError;
+    type Error = serde_bencode::Error;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase() {
@@ -46,7 +43,7 @@ impl TryFrom<char> for FileAttribute {
             'h' => Ok(Self::Hidden),
             'p' => Ok(Self::Padding),
             'l' => Ok(Self::Symlink),
-            _ => Err(DeError::unknown_variant(
+            _ => Err(Self::Error::unknown_variant(
                 &value.to_string(),
                 &FILE_ATTRIBUTE_EXPECTED,
             )),
@@ -55,7 +52,7 @@ impl TryFrom<char> for FileAttribute {
 }
 
 impl TryFrom<&str> for FileAttribute {
-    type Error = DeError;
+    type Error = serde_bencode::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         // Not using to_lowercase() because it returns a String.
@@ -64,7 +61,10 @@ impl TryFrom<&str> for FileAttribute {
             "h" | "H" => Ok(Self::Hidden),
             "p" | "P" => Ok(Self::Padding),
             "l" | "L" => Ok(Self::Symlink),
-            _ => Err(DeError::unknown_variant(value, &FILE_ATTRIBUTE_EXPECTED)),
+            _ => Err(Self::Error::unknown_variant(
+                value,
+                &FILE_ATTRIBUTE_EXPECTED,
+            )),
         }
     }
 }
@@ -118,7 +118,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// # Examples
 /// Deserialize to a strongly typed `struct` and back to a [String].
 /// ```
-/// use bedit_torrent::TorrentFileAttributes;
+/// use bedit_cloudburst::TorrentFileAttributes;
 /// use serde::{Deserialize, Serialize};
 /// use serde_bencode::Error;
 ///
@@ -131,7 +131,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// Deserialization drops duplicates and sorts the result.
 /// ```
-/// use bedit_torrent::TorrentFileAttributes;
+/// use bedit_cloudburst::TorrentFileAttributes;
 /// use serde::Deserialize;
 /// use serde_bencode::Error;
 ///
@@ -143,7 +143,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// [TryFrom] is implemented for [TorrentFileAttributes].
 /// ```
-/// use bedit_torrent::TorrentFileAttributes;
+/// use bedit_cloudburst::TorrentFileAttributes;
 /// use serde_bencode::Error;
 ///
 /// let attrs = "hlpx";
@@ -167,7 +167,7 @@ impl Display for TorrentFileAttributes {
 }
 
 impl TryFrom<&str> for TorrentFileAttributes {
-    type Error = DeError;
+    type Error = serde_bencode::Error;
 
     // Convert a &str containing any case insensitive combination of 'x', 'h', 'p', 'l'
     // to a vector of [FileAttribute].

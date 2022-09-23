@@ -1,4 +1,4 @@
-use bedit_torrent::Torrent;
+use bedit_cloudburst::Torrent;
 use std::{env, fs};
 
 #[test]

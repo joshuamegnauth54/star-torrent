@@ -15,7 +15,7 @@ use std::{collections::BTreeMap, num::NonZeroU64};
 /// Files shared by the torrent if multiple as per meta version 1.
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct SharedFiles {
     /// File attribute such as whether the file is executable or hidden.
     #[serde(default)]
@@ -41,7 +41,7 @@ pub struct SharedFiles {
 /// the leaf nodes describe files.
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct FileTreeInfo {
     /// File attribute such as whether a file is executable or hidden.
     #[serde(default)]
@@ -59,7 +59,7 @@ pub struct FileTreeInfo {
 /// [FileTreeEntry] should be deserialized as part of the overall torrent parsing process.
 ///
 /// ```
-/// use bedit_torrent::FileTreeEntry;
+/// use bedit_cloudburst::FileTreeEntry;
 /// use serde_bencode::Error;
 ///
 /// let file_de = "d9:cat_videod0:d6:lengthi1024000000e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeee";
@@ -75,50 +75,6 @@ pub struct FileTreeInfo {
 pub struct FileTreeEntry(
     #[serde(with = "either::serde_untagged")] pub Either<FileTreeInfo, FileTree>,
 );
-
-/*
-struct FileTreeEntryTemp(Either<FileTreeInfo, HashMap<String, Value>>);
-
-impl TryFrom<Value> for FileTreeEntryTemp {
-    type Error = DeError;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        if let Value::Dict(map) = value {
-            map.try_into()
-        } else {
-            Err(DeError::invalid_type(
-                value_to_unexpected(&value),
-                &"dictionary of files and directories",
-            ))
-        }
-    }
-}
-
-impl TryFrom<HashMap<String, Value>> for FileTreeEntryTemp {
-    type Error = DeError;
-
-    fn try_from(value: HashMap<String, Value>) -> Result<Self, Self::Error> {
-        match value.iter().map(|(name, _)| name.as_str()).next() {
-            // Files are keyed with an empty string in the nested dict.
-            Some("") => {
-                // A file should only have one key of "". Therefore anything else is invalid.
-                if value.len() == 1 {
-                    let file_dict: FileTreeInfo = value.try_into()?;
-                    Ok(FileTreeEntryTemp(Either::Left(file_dict)))
-                } else {
-                    debug!("Invalid HashMap for FileTreeInfo: {value:#?}");
-                    Err(DeError::invalid_length(
-                        value.len(),
-                        &"map with an empty string as its only key",
-                    ))
-                }
-            }
-            _ => Ok(FileTreeEntryTemp(Either::Right(value))),
-        }
-    }
-}
-
-*/
 
 #[derive(Debug, Deserialize, Serialize)]
 #[repr(transparent)]
@@ -178,29 +134,36 @@ where
 #[cfg(test)]
 mod tests {
     use super::FileTree;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
     use serde_bencode::Deserializer;
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Serialize)]
     struct OuterTest {
         #[allow(unused)]
         info: TestInfo,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Serialize)]
     struct TestInfo {
         #[allow(unused)]
         #[serde(rename = "file tree")]
         file_tree: FileTree,
     }
 
-    #[test]
-    fn filetree_from_bencode() {
-        // Copied directly from BEP-0052 with a typo fixed.
-        // The original info dict has d5:length but it should be d6:length
-        let bencode = "d4:infod9:file treed4:dir1d4:dir2d9:fileA.txtd0:d6:lengthi1024e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeee";
+    // Copied directly from BEP-0052 with a typo fixed.
+    // The original info dict has d5:length but it should be d6:length
+    const BENCODE: &str = "d4:infod9:file treed4:dir1d4:dir2d9:fileA.txtd0:d6:lengthi1024e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeeeeeee";
 
-        let mut deserializer = Deserializer::new(bencode.as_bytes());
-        OuterTest::deserialize(&mut deserializer).unwrap();
+    #[test]
+    fn filetree_bencode_roundtrip() -> Result<(), serde_bencode::Error> {
+        // Deserialize
+        let mut deserializer = Deserializer::new(BENCODE.as_bytes());
+        let info = OuterTest::deserialize(&mut deserializer)?;
+
+        // Serialize
+        let info_se = serde_bencode::to_string(&info)?;
+        assert_eq!(BENCODE, info_se);
+
+        Ok(())
     }
 }

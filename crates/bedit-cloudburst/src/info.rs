@@ -28,7 +28,7 @@ pub enum Info {
 
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct MetaV1 {
     #[serde(default)]
     pub files: Option<Vec<SharedFiles>>,
@@ -39,7 +39,7 @@ pub struct MetaV1 {
     pub name: String,
     pub pieces: ByteBuf,
     #[serde(rename = "piece length")]
-    pub piece_length: NonZeroU64,
+    pub piece_length: PieceLength,
     #[serde(
         default,
         deserialize_with = "bool_from_int",
@@ -52,13 +52,13 @@ pub struct MetaV1 {
 
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct MetaV2 {
     #[serde(rename = "file tree")]
     pub file_tree: FileTree,
     pub meta_version: NonZeroU8,
     #[serde(rename = "piece length")]
-    pub piece_length: NonZeroU64,
+    pub piece_length: PieceLength,
     #[serde(
         default,
         deserialize_with = "bool_from_int",
@@ -72,7 +72,7 @@ pub struct MetaV2 {
 /// Hybrid torrents contain the info dicts for all torrent meta versions.
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct Hybrid {
     /// Files shared by version 1 or hybrid torrents.
     #[serde(default)]
@@ -106,7 +106,7 @@ pub struct Hybrid {
     ///
     /// BEP-0003 states that the length is almost always a power of two and usually 2^18.
     #[serde(rename = "piece length")]
-    pub piece_length: NonZeroU64,
+    pub piece_length: PieceLength,
     /// Torrent is restricted to private trackers.
     ///
     /// [BEP-0027](https://www.bittorrent.org/beps/bep_0027.html)
@@ -128,6 +128,32 @@ pub struct Hybrid {
     pub root_hash: Option<String>,
 }
 
+/// Number of bytes per piece.
+///
+/// According to the spec, piece length should be greater than 16 KiB and is always a power of two.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct PieceLength(NonZeroU64);
+
+impl<'de> Deserialize<'de> for PieceLength {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let piece_length = NonZeroU64::deserialize(deserializer)?;
+
+        if piece_length.get() >= 16 && piece_length.is_power_of_two() {
+            Ok(PieceLength(piece_length))
+        } else {
+            Err(DeError::invalid_value(
+                Unexpected::Unsigned(piece_length.into()),
+                &"piece length should be greater than 16 and a power of two",
+            ))
+        }
+    }
+}
+
 /// Deserialize u8 to bool.
 fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
@@ -143,7 +169,7 @@ where
             )),
         },
         Err(error) => {
-            debug!(target: "bedit-torrent::info::bool_from_int", "Deserializing `private` failed which most likely means the field doesn't exist. Documenting anyways.\nError: {error}");
+            debug!(target: "bedit_cloudburst::info::bool_from_int", "Deserializing `private` failed which most likely means the field doesn't exist. Documenting anyways.\nError: {error}");
             Ok(false)
         }
     }
@@ -202,10 +228,7 @@ mod tests {
         bool_to_int(&true, &mut serializer)?;
 
         let bytes_ser = serializer.into_vec();
-        assert!(
-            bytes_ser == "i1e".as_bytes(),
-            "Some(true) wasn't serialized"
-        );
+        assert!(bytes_ser == "i1e".as_bytes(), "`true` wasn't serialized");
 
         Ok(())
     }
