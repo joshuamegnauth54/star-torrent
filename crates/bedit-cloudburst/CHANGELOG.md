@@ -1,3 +1,8 @@
+# 0.4.0
+- Move `PieceLength` to `pieces.rs`.
+- Wrap `ByteBuf` into `Pieces`.
+- Create SHA-1 wrapper types.
+
 # 0.3.0
 - Roundtrip test for `FileTree`.
 - Implement `PieceLength` as a wrapper around `NonZeroU64` that is valid only if the size is above 16 and a power of two.

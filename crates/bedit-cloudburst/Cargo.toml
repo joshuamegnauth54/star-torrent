@@ -2,7 +2,7 @@
 name = "bedit-cloudburst"
 description = "Helper structs for serializing and deserializing torrents for benitor."
 authors = ["Joshua Megnauth <>"]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 repository = "https://github.com/joshuamegnauth54/benitor/"
 license = "MIT"
@@ -23,11 +23,13 @@ path = "src/lib.rs"
 arrayvec = { version = "0.7.2", features = ["serde"] }
 either = { version = "1.7", features = ["serde"] }
 itertools = "0.10.3"
+hex = "0.4.3"
 log = "0.4"
 serde = { version = "1.0.140", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
 serde_with = "2.0.0"
+url = { version = "2", features = ["serde"] }
 
 [dev-dependencies]
 serde_test = "1.0.144"

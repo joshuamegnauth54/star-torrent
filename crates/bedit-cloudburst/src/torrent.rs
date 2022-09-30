@@ -2,7 +2,8 @@ use super::{signature::Signature, Info};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
-use std::collections::HashMap;
+use url::Url;
+use std::collections::{HashMap, HashSet};
 
 // Based on BEPs as well as:
 // https://en.wikipedia.org/wiki/Torrent_file#File_structure
@@ -66,12 +67,12 @@ pub struct Torrent {
     pub piece_layers: Option<HashMap<ByteBuf, ByteBuf>>,
     /// Torrent publisher's web site.
     #[serde(default, rename = "publisher-url")]
-    pub publisher_url: Option<String>,
+    pub publisher_url: Option<Url>,
     /// Signatures for signed torrents.
     #[serde(default)]
     pub signatures: Option<HashMap<String, Signature>>,
     /// A non-standard field similar to [Torrent::httpseeds].
     /// https://getright.com/seedtorrent.html
     #[serde(default, rename = "url-list")]
-    pub url_list: Option<Vec<String>>,
+    pub url_list: Option<HashSet<Url>>,
 }

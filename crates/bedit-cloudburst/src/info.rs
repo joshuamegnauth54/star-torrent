@@ -1,10 +1,12 @@
-use super::files::{FileTree, SharedFiles};
+use super::{
+    files::{FileTree, SharedFiles},
+    pieces::{PieceLength, Pieces},
+};
 use log::debug;
 use serde::{
     de::{Error as DeError, Unexpected},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
 use std::num::{NonZeroU64, NonZeroU8};
 
@@ -37,7 +39,7 @@ pub struct MetaV1 {
     #[serde(default)]
     pub md5sum: Option<String>,
     pub name: String,
-    pub pieces: ByteBuf,
+    pub pieces: Pieces,
     #[serde(rename = "piece length")]
     pub piece_length: PieceLength,
     #[serde(
@@ -101,7 +103,7 @@ pub struct Hybrid {
     /// A SHA-1 hash list of each piece concatenated into a string.
     /// The resulting string's length is a multiple of 20 bytes. The position of each hash
     /// corresponds to a file in `files`.
-    pub pieces: Option<ByteBuf>,
+    pub pieces: Option<Pieces>,
     /// Number of bytes per piece.
     ///
     /// BEP-0003 states that the length is almost always a power of two and usually 2^18.
@@ -126,32 +128,6 @@ pub struct Hybrid {
     /// the hashes of the subseqeuent pieces may be derived.
     #[serde(default, rename = "root hash")]
     pub root_hash: Option<String>,
-}
-
-/// Number of bytes per piece.
-///
-/// According to the spec, piece length should be greater than 16 KiB and is always a power of two.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct PieceLength(NonZeroU64);
-
-impl<'de> Deserialize<'de> for PieceLength {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let piece_length = NonZeroU64::deserialize(deserializer)?;
-
-        if piece_length.get() >= 16 && piece_length.is_power_of_two() {
-            Ok(PieceLength(piece_length))
-        } else {
-            Err(DeError::invalid_value(
-                Unexpected::Unsigned(piece_length.into()),
-                &"piece length should be greater than 16 and a power of two",
-            ))
-        }
-    }
 }
 
 /// Deserialize u8 to bool.
