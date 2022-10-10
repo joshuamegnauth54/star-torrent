@@ -5,6 +5,7 @@ mod crypto;
 mod files;
 mod info;
 mod pieces;
+mod hex;
 mod signature;
 mod torrent;
 
@@ -12,6 +13,7 @@ pub use fileattributes::{FileAttribute, TorrentFileAttributes};
 pub use crypto::Sha1Hash;
 pub use files::{FileTree, FileTreeEntry, FileTreeInfo, SharedFiles};
 pub use info::{Hybrid, Info, MetaV1, MetaV2};
+pub use hex::{Hex};
 pub use pieces::{PieceLength, Pieces};
 pub use signature::{SignInfo, Signature};
 pub use torrent::{Node, Torrent};

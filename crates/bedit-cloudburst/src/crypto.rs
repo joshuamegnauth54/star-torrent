@@ -28,6 +28,11 @@ impl Debug for Sha1Hash {
 
 impl Display for Sha1Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{}", hex::encode(&self.0))
+        write!(f, "0x")?;
+        for &byte in &self.0 {
+            write!(f, "{byte}")?;
+        }
+
+        Ok(())
     }
 }

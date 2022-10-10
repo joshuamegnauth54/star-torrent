@@ -5,7 +5,7 @@ use serde::{
 use serde_bytes::ByteBuf;
 use std::num::NonZeroU64;
 
-use crate::crypto::Sha1Hash;
+use crate::{crypto::Sha1Hash, hex::Hexadecimal};
 
 /// Number of bytes per piece.
 ///
@@ -51,7 +51,14 @@ impl<'de> Deserialize<'de> for Pieces {
         // `pieces` must be a multiple of 20.
         let len = pieces.len();
         if len % 20 == 0 {
-            Ok(Pieces(pieces))
+            if pieces.iter().copied().nibbles().flatten().validate_hex() {
+                Ok(Pieces(ByteBuf::new()))
+            } else {
+                Err(DeError::invalid_value(
+                    Unexpected::Bytes(&pieces),
+                    &"valid packed hexadecimal",
+                ))
+            }
         } else {
             Err(DeError::invalid_length(
                 len,
@@ -61,6 +68,7 @@ impl<'de> Deserialize<'de> for Pieces {
     }
 }
 
+/*
 impl Pieces {
     /// Iterator over chunks of 20 bytes.
     #[inline]
@@ -76,4 +84,16 @@ impl Pieces {
             Sha1Hash::from(bytes)
         })
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len() / 20
+    }
+
+    /// Placate Clippy.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
+*/

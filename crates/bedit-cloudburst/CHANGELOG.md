@@ -2,6 +2,7 @@
 - Move `PieceLength` to `pieces.rs`.
 - Wrap `ByteBuf` into `Pieces`.
 - Create SHA-1 wrapper types.
+- Implement simple hex validation and remove hex crates.
 
 # 0.3.0
 - Roundtrip test for `FileTree`.

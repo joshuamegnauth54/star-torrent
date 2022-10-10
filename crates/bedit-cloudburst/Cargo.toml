@@ -23,12 +23,11 @@ path = "src/lib.rs"
 arrayvec = { version = "0.7.2", features = ["serde"] }
 either = { version = "1.7", features = ["serde"] }
 itertools = "0.10.3"
-hex = "0.4.3"
 log = "0.4"
 serde = { version = "1.0.140", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
-serde_with = "2.0.0"
+serde_with = "2.0.1"
 url = { version = "2", features = ["serde"] }
 
 [dev-dependencies]
