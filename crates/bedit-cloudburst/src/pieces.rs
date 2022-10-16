@@ -5,7 +5,7 @@ use serde::{
 use serde_bytes::ByteBuf;
 use std::num::NonZeroU64;
 
-use crate::{crypto::Sha1Hash, hex::Hexadecimal};
+use crate::crypto::Sha1Hash;
 
 /// Number of bytes per piece.
 ///
@@ -46,19 +46,13 @@ impl<'de> Deserialize<'de> for Pieces {
     where
         D: Deserializer<'de>,
     {
+        // This is already a byte string so I can't really validate it.
         let pieces = ByteBuf::deserialize(deserializer)?;
 
         // `pieces` must be a multiple of 20.
         let len = pieces.len();
         if len % 20 == 0 {
-            if pieces.iter().copied().nibbles().flatten().validate_hex() {
-                Ok(Pieces(ByteBuf::new()))
-            } else {
-                Err(DeError::invalid_value(
-                    Unexpected::Bytes(&pieces),
-                    &"valid packed hexadecimal",
-                ))
-            }
+            Ok(Pieces(pieces))
         } else {
             Err(DeError::invalid_length(
                 len,
@@ -68,7 +62,6 @@ impl<'de> Deserialize<'de> for Pieces {
     }
 }
 
-/*
 impl Pieces {
     /// Iterator over chunks of 20 bytes.
     #[inline]
@@ -96,4 +89,3 @@ impl Pieces {
         self.0.is_empty()
     }
 }
-*/
