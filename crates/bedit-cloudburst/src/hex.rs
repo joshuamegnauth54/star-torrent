@@ -7,6 +7,27 @@ use std::{
 
 const HEX_LOWER: &str = "0123456789abcdef";
 // const HEX_UPPER: &str = "0123456789ABCDEF";
+const HEX_EXPECTED: &str = "valid hexadecimal characters [0-9, a-f, A-F]";
+
+// Map valid hex character to 0-15
+fn hex_to_byte(ch: char) -> Result<u8, DeError> {
+    HEX_LOWER
+        .find(ch)
+        .ok_or_else(|| DeError::invalid_value(Unexpected::Char(ch), &HEX_EXPECTED))
+        .map(|position| {
+            position.try_into().unwrap_or_else(|_| {
+                panic!(
+                    "Index of character was greater than 255 (can't happen).\nIndex: {position}\n"
+                )
+            })
+        })
+}
+
+// Pack two hex bytes into a single byte.
+#[inline]
+fn pack(bytes: [u8; 2]) -> u8 {
+    (bytes[0] << 4) | bytes[1]
+}
 
 pub struct HexBytes<'bytes> {
     bytes: Cow<'bytes, [u8]>,
@@ -43,31 +64,31 @@ impl HexBytes<'_> {
     {
         let maybe_hex = maybe_hex.as_ref();
 
-        if maybe_hex.chars().validate_hex() {
+        if maybe_hex.len() % 2 != 0 {
+            Err(DeError::invalid_length(
+                maybe_hex.len(),
+                &"valid hex string lengths are divisible by two",
+            ))
+        } else {
             let bytes = maybe_hex
-                .chars()
-                .map(|mut ch| {
-                    ch.make_ascii_lowercase();
+                .as_bytes()
+                .chunks(2)
+                .map(|chunk| {
+                    // This won't panic because maybe_hex.len() is divisible by two.
+                    // Normally chunks would return the remainder and thus the below would panic.
+                    let upper = chunk[0].to_ascii_lowercase();
+                    let lower = chunk[1].to_ascii_lowercase();
 
-                    // Map character to 0-15
-                    HEX_LOWER
-                        .find(ch)
-                        .ok_or_else(|| {
-                            DeError::invalid_value(
-                                Unexpected::Char(ch),
-                                &"valid hexadecimal characters",
-                            )
-                        })
-                        .map(|position| position.try_into().unwrap_or_else(|_| panic!("Index of character was greater than 255 (can't happen).\nIndex: {position}\n")))
+                    // Uh, I really want to use PackedHex here but hex_to_byte is fallible.
+                    match (hex_to_byte(upper as char), hex_to_byte(lower as char)) {
+                        (Ok(upper), Ok(lower)) => Ok(pack([upper, lower])),
+                        (Err(e), _) | (_, Err(e)) => Err(e),
+                    }
                 })
-                .collect::<Result<Vec<u8>, _>>()?.into();
+                .collect::<Result<Vec<u8>, _>>()?
+                .into();
 
             Ok(HexBytes { bytes })
-        } else {
-            Err(DeError::invalid_value(
-                Unexpected::Str(maybe_hex),
-                &"valid hexadecimal characters [0-9, a-f, A-F]",
-            ))
         }
     }
 }
@@ -88,7 +109,7 @@ impl Display for HexBytes<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for &byte in self.bytes.iter() {
             // Bytes are assumed to be packed hexadecimal
-            write!(f, "{:x}", byte)?;
+            write!(f, "{:02x}", byte)?;
         }
 
         Ok(())
@@ -162,7 +183,7 @@ where
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let bytes = self.iter.next()?;
-        Some((bytes[0] << 4) | bytes[1])
+        Some(pack(bytes))
     }
 
     #[inline]
@@ -192,15 +213,13 @@ pub trait Hexadecimal {
         Nibbles { iter: self }
     }
 
-    /*
-    fn chars_to_packed<I>(self) -> PackedHex<I>
+    #[inline]
+    fn packed_hex(self) -> PackedHex<Self>
     where
-        Self: Sized + Iterator<Item = char>,
-        I: Iterator
+        Self: Sized + Iterator<Item = [u8; 2]>,
     {
-        PackedHex { iter: self.map(|ch| ch).into_iter() }
+        PackedHex { iter: self }
     }
-    */
 
     #[inline]
     fn validate_hex(&mut self) -> bool
