@@ -1,3 +1,4 @@
+use log::error;
 use serde::{
     de::{Error as DeError, Unexpected},
     Deserialize, Deserializer, Serialize,
@@ -25,6 +26,7 @@ impl<'de> Deserialize<'de> for PieceLength {
         if piece_length.get() >= 16 && piece_length.is_power_of_two() {
             Ok(PieceLength(piece_length))
         } else {
+            error!(target: "bedit_cloudburst::PieceLength::deserialize", "Invalid piece length: {piece_length}.");
             Err(DeError::invalid_value(
                 Unexpected::Unsigned(piece_length.into()),
                 &"piece length should be greater than 16 and a power of two",
@@ -54,6 +56,7 @@ impl<'de> Deserialize<'de> for Pieces {
         if len % 20 == 0 {
             Ok(Pieces(pieces))
         } else {
+            error!(target: "bedit_cloudburst::Piece::deserialize", "Pieces should be a multiple of twenty; got: {len}");
             Err(DeError::invalid_length(
                 len,
                 &"length of `pieces` should be a multiple of 20",

@@ -1,7 +1,10 @@
-use serde::de::{value::Error as DeError, Error as DeErrorTrait, Unexpected};
+use serde::{
+    de::{value::Error as DeError, Error as DeErrorTrait, Unexpected},
+    Deserialize, Serialize,
+};
 use std::{
     borrow::Cow,
-    fmt::{self, Display, Formatter},
+    fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex},
     iter::FusedIterator,
 };
 
@@ -29,12 +32,16 @@ fn pack(bytes: [u8; 2]) -> u8 {
     (bytes[0] << 4) | bytes[1]
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
 pub struct HexBytes<'bytes> {
     bytes: Cow<'bytes, [u8]>,
 }
 
 impl HexBytes<'_> {
     /// Validate byte slice as valid hexadecimal (case insensitive).
+    ///
+    /// [Display], [Binary], [UpperHex], and [LowerHex] are implemented for [HexBytes].
     ///
     /// # Examples
     /// ```
@@ -46,6 +53,13 @@ impl HexBytes<'_> {
     ///
     /// let coffee_str = coffee_hex.to_string();
     /// assert_eq!(coffee_str, "cafed00d");
+    ///
+    /// let cafe_upper = format!("{:02X}", coffee_hex);
+    /// assert_eq!(cafe_upper, "CAFED00D");
+    ///
+    /// let cafe_lower = format!("{:02x}", coffee_hex);
+    /// assert_eq!(cafe_lower, "cafed00d");
+    ///
     /// # Ok::<(), Error>(())
     /// ```
     ///
@@ -91,6 +105,18 @@ impl HexBytes<'_> {
             Ok(HexBytes { bytes })
         }
     }
+
+    // Proxy function to make implementing traits from [std::fmt] easier.
+    fn hex_display_proxy(&self, f: &mut Formatter<'_>) -> Result<(usize, usize), fmt::Error> {
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+
+        let width = f.width().unwrap_or(0);
+        let precision = f.precision().unwrap_or(2);
+
+        Ok((width, precision))
+    }
 }
 
 impl<'bytes, B> From<B> for HexBytes<'bytes>
@@ -105,11 +131,46 @@ where
     }
 }
 
+// Bytes are assumed to be packed hexadecimal which is fine because I check it anyway.
 impl Display for HexBytes<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for &byte in self.bytes.iter() {
-            // Bytes are assumed to be packed hexadecimal
             write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Binary for HexBytes<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for byte in self.bytes.iter() {
+            Binary::fmt(byte, f)?;
+            write!(f, " ")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl LowerHex for HexBytes<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let (width, precision) = self.hex_display_proxy(f)?;
+
+        for byte in self.bytes.iter() {
+            write!(f, "{:0width$.precision$x}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl UpperHex for HexBytes<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let (width, precision) = self.hex_display_proxy(f)?;
+
+        for &byte in self.bytes.iter() {
+            write!(f, "{:0width$.precision$X}", byte)?;
         }
 
         Ok(())
