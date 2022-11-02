@@ -8,7 +8,10 @@
 // Using ArrayVec: https://nnethercote.github.io/perf-book/heap-allocations.html
 use arrayvec::ArrayVec;
 use itertools::Itertools;
-use serde::{de::Error as DeErrorTrait, Deserialize, Serialize};
+use serde::{
+    de::{value::Error, Error as DeErrorTrait},
+    Deserialize, Serialize,
+};
 use std::fmt::{self, Display, Formatter};
 
 // Valid, lower cased file attributes.
@@ -35,7 +38,7 @@ pub enum FileAttribute {
 }
 
 impl TryFrom<char> for FileAttribute {
-    type Error = serde_bencode::Error;
+    type Error = Error;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase() {
@@ -52,7 +55,7 @@ impl TryFrom<char> for FileAttribute {
 }
 
 impl TryFrom<&str> for FileAttribute {
-    type Error = serde_bencode::Error;
+    type Error = Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         // Not using to_lowercase() because it returns a String.
@@ -167,7 +170,7 @@ impl Display for TorrentFileAttributes {
 }
 
 impl TryFrom<&str> for TorrentFileAttributes {
-    type Error = serde_bencode::Error;
+    type Error = Error;
 
     // Convert a &str containing any case insensitive combination of 'x', 'h', 'p', 'l'
     // to a vector of [FileAttribute].

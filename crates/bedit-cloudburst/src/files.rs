@@ -5,12 +5,16 @@
 //!
 //! Compared to version 1 torrents, version 2 torrents may be smaller in size due to [FileTree]s deduplicating paths.
 
-use super::fileattributes::TorrentFileAttributes;
+use super::{fileattributes::TorrentFileAttributes, hexadecimal::HexBytes};
 use either::Either;
 use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
 use std::{collections::BTreeMap, num::NonZeroU64};
+
+#[cfg(debug_assertions)]
+const FILETREE_DE_TARGET: &str = "bedit_cloudburst::FileTree::deserialize";
+#[cfg(debug_assertions)]
+use log::{debug, error};
 
 /// Files shared by the torrent if multiple as per meta version 1.
 #[skip_serializing_none]
@@ -50,7 +54,7 @@ pub struct FileTreeInfo {
     pub length: NonZeroU64,
     /// Merkel tree root.
     #[serde(default, rename = "pieces root")]
-    pub pieces_root: Option<ByteBuf>,
+    pub pieces_root: Option<HexBytes>,
 }
 
 /// A file or a directory in version 2 [FileTree]s.
@@ -70,17 +74,47 @@ pub struct FileTreeInfo {
 /// # Ok::<(), Error>(())
 /// ```
 #[derive(Debug, Deserialize, Serialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub struct FileTreeEntry(
     #[serde(with = "either::serde_untagged")] pub Either<FileTreeInfo, FileTree>,
 );
 
-#[derive(Debug, Deserialize, Serialize)]
-#[repr(transparent)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(not(debug_assertions), derive(Deserialize))]
 #[serde(transparent)]
 pub struct FileTree {
     pub node: BTreeMap<String, FileTreeEntry>,
+}
+
+#[cfg(debug_assertions)]
+impl<'de> Deserialize<'de> for FileTree {
+    // This impl is primarily for better error logs during deserialization.
+    // [bedit_cloudburst::Info] is deserialized by matching till a valid variant is found.
+    // However, the error from the deserialized types is consumed leading to an entirely non-descriptive message: "data did not match any variant of untagged enum Info"
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        debug!(target: FILETREE_DE_TARGET, "Deserializing `FileTree`.");
+        let node = match BTreeMap::<String, FileTreeEntry>::deserialize(deserializer) {
+            Ok(node) => node,
+            Err(e) => {
+                error!(
+                    target: FILETREE_DE_TARGET,
+                    "Failed deserializing `FileTree`\nError:{e}"
+                );
+
+                return Err(e);
+            }
+        };
+
+        debug!(
+            target: FILETREE_DE_TARGET,
+            "`FileTree` root length: {}",
+            node.len()
+        );
+        Ok(FileTree { node })
+    }
 }
 
 /*

@@ -1,5 +1,5 @@
 use bedit_cloudburst::Torrent;
-use std::{env, fs};
+use std::{env, error::Error, fs};
 
 #[test]
 fn test_files() {
@@ -18,11 +18,13 @@ fn test_files() {
                 entry.path()
             )
         });
-        let _torrent: Torrent = serde_bencode::from_bytes(&contents).unwrap_or_else(|error| {
-            panic!(
-                "Torrent file failed to deserialize\nPath: {:?}\nError: {error}",
-                entry.path()
+        let _torrent: Torrent =
+            serde_bencode::from_bytes(&contents).unwrap_or_else(|error| {
+                panic!(
+                "Torrent file failed to deserialize\nPath: {:?}\nError: {error}\nSource: {source}",
+                entry.path(),
+                source = error.source().map_or("No source".to_owned(), |e| e.to_string())
             )
-        });
+            });
     }
 }

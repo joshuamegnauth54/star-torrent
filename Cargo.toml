@@ -10,6 +10,7 @@ keywords = ["torrent", "parse", "cross-platform", "gui", "p2p"]
 categories = ["config", "parsing"]
 
 [profile.release]
+strip = true
 lto = true
 
 [workspace]

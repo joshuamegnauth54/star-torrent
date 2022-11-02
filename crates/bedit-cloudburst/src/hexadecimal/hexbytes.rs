@@ -1,16 +1,16 @@
+use super::nibbles::pack_bytes;
+use log::error;
 use serde::{
     de::{value::Error as DeError, Error as DeErrorTrait, Unexpected},
     Deserialize, Serialize,
 };
-use std::{
-    borrow::Cow,
-    fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex},
-    iter::FusedIterator,
-};
+use serde_bytes::ByteBuf;
+use std::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 
 const HEX_LOWER: &str = "0123456789abcdef";
 // const HEX_UPPER: &str = "0123456789ABCDEF";
 const HEX_EXPECTED: &str = "valid hexadecimal characters [0-9, a-f, A-F]";
+const FROMHEXSTR_TARGET: &str = "bedit_cloudburst::hexadecimal::HexBytes::from_hex_str";
 
 // Map valid hex character to 0-15
 fn hex_to_byte(ch: char) -> Result<u8, DeError> {
@@ -26,26 +26,20 @@ fn hex_to_byte(ch: char) -> Result<u8, DeError> {
         })
 }
 
-// Pack two hex bytes into a single byte.
-#[inline]
-fn pack(bytes: [u8; 2]) -> u8 {
-    (bytes[0] << 4) | bytes[1]
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(transparent)]
-pub struct HexBytes<'bytes> {
-    bytes: Cow<'bytes, [u8]>,
+pub struct HexBytes {
+    bytes: ByteBuf,
 }
 
-impl HexBytes<'_> {
+impl HexBytes {
     /// Validate byte slice as valid hexadecimal (case insensitive).
     ///
     /// [Display], [Binary], [UpperHex], and [LowerHex] are implemented for [HexBytes].
     ///
     /// # Examples
     /// ```
-    /// use bedit_cloudburst::HexBytes;
+    /// use bedit_cloudburst::hexadecimal::HexBytes;
     /// use serde::de::value::Error;
     ///
     /// let james_hoffman = "cafeD00d";
@@ -65,7 +59,7 @@ impl HexBytes<'_> {
     ///
     /// Oops.
     /// ```
-    /// use bedit_cloudburst::HexBytes;
+    /// use bedit_cloudburst::hexadecimal::HexBytes;
     ///
     /// let giraffe = "*giraffe noises* 🦒";
     /// let hexraffe = HexBytes::from_hex_str(giraffe);
@@ -77,11 +71,17 @@ impl HexBytes<'_> {
         S: AsRef<str>,
     {
         let maybe_hex = maybe_hex.as_ref();
+        let maybe_hex_len = maybe_hex.len();
 
-        if maybe_hex.len() % 2 != 0 {
+        if maybe_hex_len % 2 != 0 || maybe_hex_len == 0 {
+            error!(
+                target: FROMHEXSTR_TARGET,
+                "Invalid hex string length: {maybe_hex_len}"
+            );
+
             Err(DeError::invalid_length(
-                maybe_hex.len(),
-                &"valid hex string lengths are divisible by two",
+                maybe_hex_len,
+                &"valid hex string lengths are divisible by two and greater than zero",
             ))
         } else {
             let bytes = maybe_hex
@@ -90,20 +90,62 @@ impl HexBytes<'_> {
                 .map(|chunk| {
                     // This won't panic because maybe_hex.len() is divisible by two.
                     // Normally chunks would return the remainder and thus the below would panic.
-                    let upper = chunk[0].to_ascii_lowercase();
-                    let lower = chunk[1].to_ascii_lowercase();
+                    let upper = chunk[0].to_ascii_lowercase() as char;
+                    let lower = chunk[1].to_ascii_lowercase() as char;
 
                     // Uh, I really want to use PackedHex here but hex_to_byte is fallible.
-                    match (hex_to_byte(upper as char), hex_to_byte(lower as char)) {
-                        (Ok(upper), Ok(lower)) => Ok(pack([upper, lower])),
-                        (Err(e), _) | (_, Err(e)) => Err(e),
+                    match (hex_to_byte(upper), hex_to_byte(lower)) {
+                        (Ok(upper), Ok(lower)) => Ok(pack_bytes([upper, lower])),
+                        (Err(e), _) | (_, Err(e)) => {
+                            error!(target: FROMHEXSTR_TARGET, "ASCII character is out of the range for hex; {upper} {lower}\nError: {e}");
+                            Err(e)
+                        },
                     }
                 })
                 .collect::<Result<Vec<u8>, _>>()?
                 .into();
 
-            Ok(HexBytes { bytes })
+            Ok(bytes)
         }
+    }
+
+
+    #[inline]
+    pub(crate) fn new(bytes: ByteBuf) -> Self {
+        // For some reason, probably due to my own idiocy, I can't use Into to construct HexBytes.
+        Self { bytes }
+    }
+
+    /// Returns the amount of bytes stored.
+    ///
+    /// ```rust
+    /// use bedit_cloudburst::hexadecimal::HexBytes;
+    /// use serde::de::value::Error;
+    ///
+    /// let bytes = HexBytes::from_hex_str("dead")?;
+    /// assert_eq!(bytes.len(), 2);
+    ///
+    /// # Ok::<(), Error>(())
+    /// ```
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
+    #[inline]
+    pub fn as_slice(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+
+    /// Iterator over packed hexadecimal bytes.
+    #[inline]
+    pub fn iter(&self) -> impl Iterator + '_ {
+        self.bytes.iter()
     }
 
     // Proxy function to make implementing traits from [std::fmt] easier.
@@ -119,20 +161,21 @@ impl HexBytes<'_> {
     }
 }
 
-impl<'bytes, B> From<B> for HexBytes<'bytes>
+impl<B> From<B> for HexBytes
 where
-    B: Into<Cow<'bytes, [u8]>>,
+    B: Into<Vec<u8>>,
 {
+    #[inline]
     fn from(bytes: B) -> Self {
         // No validation because these are just bytes.
         Self {
-            bytes: bytes.into(),
+            bytes: ByteBuf::from(bytes.into()),
         }
     }
 }
 
 // Bytes are assumed to be packed hexadecimal which is fine because I check it anyway.
-impl Display for HexBytes<'_> {
+impl Display for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for &byte in self.bytes.iter() {
             write!(f, "{:02x}", byte)?;
@@ -142,7 +185,7 @@ impl Display for HexBytes<'_> {
     }
 }
 
-impl Binary for HexBytes<'_> {
+impl Binary for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for byte in self.bytes.iter() {
             Binary::fmt(byte, f)?;
@@ -153,7 +196,7 @@ impl Binary for HexBytes<'_> {
     }
 }
 
-impl LowerHex for HexBytes<'_> {
+impl LowerHex for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let (width, precision) = self.hex_display_proxy(f)?;
 
@@ -165,7 +208,7 @@ impl LowerHex for HexBytes<'_> {
     }
 }
 
-impl UpperHex for HexBytes<'_> {
+impl UpperHex for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let (width, precision) = self.hex_display_proxy(f)?;
 
@@ -176,119 +219,3 @@ impl UpperHex for HexBytes<'_> {
         Ok(())
     }
 }
-
-/// Yields nibbles from bytes.
-#[derive(Clone)]
-#[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct Nibbles<I> {
-    iter: I,
-}
-
-/// Yields packed bytes from nibbles.
-#[derive(Clone)]
-#[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct PackedHex<I> {
-    iter: I,
-}
-
-// Adapter to unpack a `u8` to `[u8; 2]` (nibbles).
-impl<I> Iterator for Nibbles<I>
-where
-    I: Iterator<Item = u8>,
-{
-    type Item = [u8; 2];
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let byte = self.iter.next()?;
-        Some([byte >> 4, byte & 0x0F])
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
-    }
-}
-
-impl<I> FusedIterator for Nibbles<I> where I: Iterator<Item = u8> {}
-impl<I> ExactSizeIterator for Nibbles<I>
-where
-    I: Iterator<Item = u8> + ExactSizeIterator,
-{
-    #[inline]
-    fn len(&self) -> usize {
-        self.iter.len()
-    }
-}
-
-impl<I> Nibbles<I>
-where
-    I: Iterator,
-{
-    #[inline]
-    pub fn packed_hex(self) -> PackedHex<Self>
-    where
-        Self: Sized + Iterator<Item = [u8; 2]>,
-    {
-        PackedHex { iter: self }
-    }
-}
-
-// Adapter to pack `[u8; 2]` to `u8`.
-impl<I> Iterator for PackedHex<I>
-where
-    I: Iterator<Item = [u8; 2]>,
-{
-    type Item = u8;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let bytes = self.iter.next()?;
-        Some(pack(bytes))
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
-    }
-}
-
-impl<I> FusedIterator for PackedHex<I> where I: Iterator<Item = [u8; 2]> {}
-
-impl<I> ExactSizeIterator for PackedHex<I>
-where
-    I: Iterator<Item = [u8; 2]> + ExactSizeIterator,
-{
-    #[inline]
-    fn len(&self) -> usize {
-        self.iter.len()
-    }
-}
-
-pub trait Hexadecimal {
-    #[inline]
-    fn nibbles(self) -> Nibbles<Self>
-    where
-        Self: Sized + Iterator<Item = u8>,
-    {
-        Nibbles { iter: self }
-    }
-
-    #[inline]
-    fn packed_hex(self) -> PackedHex<Self>
-    where
-        Self: Sized + Iterator<Item = [u8; 2]>,
-    {
-        PackedHex { iter: self }
-    }
-
-    #[inline]
-    fn validate_hex(&mut self) -> bool
-    where
-        Self: Sized + Iterator<Item = char>,
-    {
-        self.all(|ch| ch.is_ascii_hexdigit())
-    }
-}
-
-impl<I> Hexadecimal for I where I: Iterator {}

@@ -10,6 +10,8 @@ use serde::{
 use serde_with::skip_serializing_none;
 use std::num::{NonZeroU64, NonZeroU8};
 
+const BOOLFROMINT_DE_TARGET: &str = "bedit_cloudburst::info::bool_from_int";
+
 /// Metainfo on files shared by torrents.
 ///
 /// The base structure is defined in [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html).
@@ -30,7 +32,7 @@ pub enum Info {
 
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
+#[serde(deny_unknown_fields)]
 pub struct MetaV1 {
     #[serde(default)]
     pub files: Option<Vec<SharedFiles>>,
@@ -54,10 +56,11 @@ pub struct MetaV1 {
 
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
+#[serde(deny_unknown_fields)]
 pub struct MetaV2 {
     #[serde(rename = "file tree")]
     pub file_tree: FileTree,
+    pub name: String,
     pub meta_version: NonZeroU8,
     #[serde(rename = "piece length")]
     pub piece_length: PieceLength,
@@ -145,7 +148,7 @@ where
             )),
         },
         Err(error) => {
-            debug!(target: "bedit_cloudburst::info::bool_from_int", "Deserializing `private` failed which most likely means the field doesn't exist. Documenting anyways.\nError: {error}");
+            debug!(target: BOOLFROMINT_DE_TARGET, "Deserializing `private` failed which most likely means the field doesn't exist. Documenting anyways.\nError: {error}");
             Ok(false)
         }
     }
@@ -167,6 +170,7 @@ mod tests {
         value::{Error as DeError, StrDeserializer},
         Error as SerdeError, IntoDeserializer,
     };
+    use serde_test::{assert_tokens, Token};
     use std::error::Error;
 
     #[test]
@@ -208,4 +212,13 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn info_metav1_only() {}
+
+    #[test]
+    fn info_metav2_only() {}
+
+    #[test]
+    fn info_hybrid() {}
 }

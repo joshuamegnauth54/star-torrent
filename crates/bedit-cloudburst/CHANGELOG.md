@@ -1,3 +1,11 @@
+# 0.5.0
+- Wrap `ByteBuf` into `HexBytes`
+- Use `HexBytes` everywhere.
+- Wrap `url::Url` because the serde implementations serialize and deserialize the `Url` `struct` rather than just a `String`.
+- Apply `deny_unknown_fields` to all info dicts that aren't `Hybrid`. Serde might match the `Info` enum as version 1 or 2 rather than hybrid without it.
+- Start implementing a few convenience functions for `Torrent` to make the data structure easier to use for clients.
+- Switch `FileAttributes` to `serde::de::value::Error`.
+
 # 0.4.0
 - Move `PieceLength` to `pieces.rs`.
 - Wrap `ByteBuf` into `Pieces`.

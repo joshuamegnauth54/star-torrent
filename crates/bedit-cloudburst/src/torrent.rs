@@ -1,8 +1,8 @@
-use super::{signature::Signature, Info};
+use crate::hexadecimal::HexBytes;
+
+use super::{signature::Signature, urlwrapper::UrlWrapper, Info};
 use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
 use serde_with::skip_serializing_none;
-use url::Url;
 use std::collections::{HashMap, HashSet};
 
 // Based on BEPs as well as:
@@ -64,15 +64,37 @@ pub struct Torrent {
     /// Piece layers for Merkel tree (meta version 2).
     /// https://www.bittorrent.org/beps/bep_0052.html
     #[serde(default, rename = "piece layers")]
-    pub piece_layers: Option<HashMap<ByteBuf, ByteBuf>>,
+    pub piece_layers: Option<HashMap<HexBytes, HexBytes>>,
     /// Torrent publisher's web site.
     #[serde(default, rename = "publisher-url")]
-    pub publisher_url: Option<Url>,
+    pub publisher_url: Option<UrlWrapper>,
     /// Signatures for signed torrents.
     #[serde(default)]
     pub signatures: Option<HashMap<String, Signature>>,
     /// A non-standard field similar to [Torrent::httpseeds].
     /// https://getright.com/seedtorrent.html
     #[serde(default, rename = "url-list")]
-    pub url_list: Option<HashSet<Url>>,
+    pub url_list: Option<HashSet<UrlWrapper>>,
+}
+
+impl Torrent {
+    /// Suggested name of the torrent file or directory.
+    ///
+    /// ```rust
+    /// use bedit_cloudburst::{Info, MetaV1, Torrent};
+    /// use serde::de::value::Error;
+    ///
+    /// let cats = "d8:announce9:localhost4:info:d4info4:name8:cats.mkv6:pieces:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
+    /// let torrent: Torrent = serde_bencode::from_str(cats)?;
+    ///
+    /// assert_eq!("cats.mkv", torrent.name());
+    /// # Ok::<(), Error>(())
+    /// ```
+    pub fn name(&self) -> &str {
+        match self.info {
+            Info::MetaV1(ref dict) => dict.name.as_str(),
+            Info::MetaV2(ref dict) => dict.name.as_str(),
+            Info::Hybrid(ref dict) => dict.name.as_str(),
+        }
+    }
 }
