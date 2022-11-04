@@ -1,31 +1,31 @@
-//! Types for cryptography used in torrents.
+//! SHA-1 hash.
 
 use crate::hexadecimal::HexBytes;
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow,
     fmt::{self, Debug, Display},
 };
 
 #[derive(Deserialize, Serialize)]
 #[serde(transparent)]
-pub struct Sha1Hash<'bytes>(Cow<'bytes, HexBytes>);
+pub struct Sha1Hash(HexBytes);
 
-impl From<[u8; 20]> for Sha1Hash<'_> {
+impl From<[u8; 20]> for Sha1Hash {
     #[inline]
     fn from(value: [u8; 20]) -> Self {
-        let hex: HexBytes = value.to_vec().into();
-        Sha1Hash(Cow::Owned(hex))
+        Sha1Hash(value.to_vec().into())
     }
 }
 
-impl Debug for Sha1Hash<'_> {
+impl Debug for Sha1Hash {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <HexBytes as Debug>::fmt(&self.0, f)
     }
 }
 
-impl Display for Sha1Hash<'_> {
+impl Display for Sha1Hash {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <HexBytes as Debug>::fmt(&self.0, f)
     }

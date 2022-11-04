@@ -31,13 +31,13 @@ pub struct Torrent {
     ///
     /// `announce` is optional because torrent files may preclude them if `nodes` is present.
     #[serde(default)]
-    pub announce: Option<String>,
+    pub announce: Option<UrlWrapper>,
     /// Tiers of announce URLs.
     ///
     /// https://www.bittorrent.org/beps/bep_0012.html
     /// The announce URLs are represented as a list of lists of URLs.
     #[serde(default, rename = "announce-list")]
-    pub announce_list: Option<Vec<Vec<String>>>,
+    pub announce_list: Option<Vec<Vec<UrlWrapper>>>,
     /// Torrent creator or original uploader.
     #[serde(default, rename = "created by")]
     pub created_by: Option<String>,
@@ -54,7 +54,10 @@ pub struct Torrent {
     /// https://www.bittorrent.org/beps/bep_0017.html
     #[serde(default)]
     pub httpseeds: Option<Vec<String>>,
-    /// Files shared by this torrent.
+    /// Torrent info dictionary.
+    ///
+    /// The info dict contains integral data on the files shared by the torrent.
+    /// This includes suggested names as well as file hashes.
     pub info: Info,
     /// Nodes for distributed hash tables (DHT).
     ///
@@ -82,9 +85,10 @@ impl Torrent {
     ///
     /// ```rust
     /// use bedit_cloudburst::{Info, MetaV1, Torrent};
-    /// use serde::de::value::Error;
+    /// use serde_bencode::Error;
     ///
-    /// let cats = "d8:announce9:localhost4:info:d4info4:name8:cats.mkv6:pieces:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
+    /// // let cats = "d8:announce9:localhostd4:info4:name8:cats.mkv6:pieces10:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
+    /// let cats = "d8:announce9:localhostd4:info4:name8:cats.mkv6:pieces10:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
     /// let torrent: Torrent = serde_bencode::from_str(cats)?;
     ///
     /// assert_eq!("cats.mkv", torrent.name());

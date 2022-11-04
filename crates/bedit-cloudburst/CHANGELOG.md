@@ -1,3 +1,6 @@
+# 0.6.0
+- Simplify and improve bin tester by deduplicating code to print results and iterating over `Vec<Result<Torrent, _>>` instead of `Result<Vec<Torrent, _>>>`
+
 # 0.5.0
 - Wrap `ByteBuf` into `HexBytes`
 - Use `HexBytes` everywhere.

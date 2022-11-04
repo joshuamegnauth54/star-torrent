@@ -147,7 +147,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// [TryFrom] is implemented for [TorrentFileAttributes].
 /// ```
 /// use bedit_cloudburst::TorrentFileAttributes;
-/// use serde_bencode::Error;
+/// use serde::de::value::Error;
 ///
 /// let attrs = "hlpx";
 /// let torrent_attrs: TorrentFileAttributes = attrs.try_into()?;

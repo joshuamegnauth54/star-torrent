@@ -23,8 +23,8 @@ settings-editor = ["bedit-settings"]
 gui = ["iced"]
 
 [dependencies]
-bedit-settings = { path = "crates/bedit-settings", optional = true }
 bedit-cloudburst = { path = "crates/bedit-cloudburst" }
+bedit-settings = { path = "crates/bedit-settings", optional = true }
 iced = { version = "0.4.2", optional = true }
 log = { version = "0.4", optional = true }
 pretty_env_logger = { version = "0.4", optional = true }
