@@ -5,11 +5,21 @@
 //!
 //! Compared to version 1 torrents, version 2 torrents may be smaller in size due to [FileTree]s deduplicating paths.
 
-use super::{fileattributes::TorrentFileAttributes, hexadecimal::HexBytes};
+use super::{
+    crypto::{
+        md5::Md5,
+        sha::{Sha1, Sha256},
+    },
+    fileattributes::TorrentFileAttributes,
+};
 use either::Either;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::{collections::BTreeMap, num::NonZeroU64};
+use std::{
+    collections::{btree_map, BTreeMap, VecDeque},
+    num::NonZeroU64,
+    path::{Path, PathBuf},
+};
 
 #[cfg(debug_assertions)]
 const FILETREE_DE_TARGET: &str = "bedit_cloudburst::FileTree::deserialize";
@@ -27,13 +37,13 @@ pub struct SharedFiles {
     /// Length of the file in bytes.
     pub length: NonZeroU64,
     /// List of UTF-8 strings consisting of subdirectory names where the last string is the file name.
-    pub path: Vec<String>,
+    pub path: Vec<PathBuf>,
     /// Checksum for the shared file.
     #[serde(default)]
-    pub md5sum: Option<String>,
+    pub md5sum: Option<Md5>,
     /// SHA1 of file to aid file deduplication.
     #[serde(default)]
-    pub sha1: Option<String>,
+    pub sha1: Option<Sha1>,
     /// Paths for symbolic links.
     #[serde(default, rename = "symlink path")]
     pub symlink_path: Option<Vec<String>>,
@@ -52,9 +62,9 @@ pub struct FileTreeInfo {
     pub attr: Option<TorrentFileAttributes>,
     /// Length of the file in bytes.
     pub length: NonZeroU64,
-    /// Merkel tree root.
+    /// Merkel tree root as a SHA256 hash.
     #[serde(default, rename = "pieces root")]
-    pub pieces_root: Option<HexBytes>,
+    pub pieces_root: Option<Sha256>,
 }
 
 /// A file or a directory in version 2 [FileTree]s.
@@ -84,6 +94,19 @@ pub struct FileTreeEntry(
 #[serde(transparent)]
 pub struct FileTree {
     pub node: BTreeMap<String, FileTreeEntry>,
+}
+
+impl FileTree {
+    pub fn iter_dfs<'iter>(&'iter self) -> FileTreeDFS<'iter> {
+        //let mut iters = VecDeque::new();
+        //iters.push_front(self.node.iter());
+        let iters: VecDeque<_> = [(PathBuf::from("./"), self.node.iter())].into();
+
+       FileTreeDFS {
+            current_dir: iters.front().unwrap().0.as_path(),
+            iters,
+        }
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -117,54 +140,28 @@ impl<'de> Deserialize<'de> for FileTree {
     }
 }
 
-/*
-impl<I> Iterator for FileTreePathsDFS<I>
-where
-    I: Iterator<Item = (Vec<u8>, Value)>,
-{
-    type Item = Result<(String, FileTreeEntry), ParseTorrentError>;
+#[derive(Debug)]
+pub struct FileTreePathView {
+    pub directory: PathBuf,
+    pub name: String,
+}
+
+pub struct FileTreeDFS<'iter> {
+    current_dir: &'iter Path,
+    iters: VecDeque<(PathBuf, btree_map::Iter<'iter, String, FileTreeEntry>)>,
+}
+
+impl<'iter> Iterator for FileTreeDFS<'iter> {
+    type Item = FileTreePathView;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((bytes, value)) = self.iterator.next() {
-            // The structure is something like:
-            // dir1 {
-            //     (directories | files)...
-            // },
-            // dir2 {
-            //     (directories | files)...
-            // },
-            // file1.txt {
-            //     "": InfoMap
-            // },
-            // ad nauseam...
-            //
-            // So...the type is Dict<String, Value::Dict<String, Dir | FileMap>>
-            // The implementation needs to check if the dictionary value is a file or a directory,
-            // and the recurse or return as appropriate.
+        let cur_iter = self.iters.front()?;
+        // let (name, entry) = cur_iter.next()?;
 
-            let empty_bytes = "".as_bytes();
-            let name = String::from_utf8_lossy(&bytes);
-
-            if let Value::Dict(value) = value {
-                match value.iter().map(|(name, value)| name).next() {
-                    empty_bytes => {
-                        let file_dict: FileTreeInfo = value.try_into()?;
-                        Ok(Some(name, file_dict))
-                    }
-                    dir => {
-                        let paths_iter = FileTreePaths(dir_dict);
-                        Some(paths_iter.depth_first_map().collect())
-                    }
-                }
-            } else {
-                DeError::invalid_type(value_to_unexpected(&value), &"dict: file info or directory")?
-            }
-        } else {
-            None
-        }
+        None
     }
 }
-*/
+
 #[cfg(test)]
 mod tests {
     use super::FileTree;

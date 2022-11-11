@@ -1,5 +1,7 @@
 # 0.6.0
-- Simplify and improve bin tester by deduplicating code to print results and iterating over `Vec<Result<Torrent, _>>` instead of `Result<Vec<Torrent, _>>>`
+- Simplify and improve bin tester by deduplicating code to print results and iterating over `Result<Vec<PathBuf, _>>` instead of `Result<Vec<Torrent, _>>>`.
+- Add pretty colors to output.
+- Use wrappers around hash types in `Info` and everywhere else.
 
 # 0.5.0
 - Wrap `ByteBuf` into `HexBytes`

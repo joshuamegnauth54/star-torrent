@@ -1,46 +1,54 @@
+#![feature(once_cell)]
+
 use bedit_cloudburst::Torrent;
-use color_eyre::Result;
-use serde_bencode::Error;
+use color_eyre::owo_colors::{OwoColorize, Style};
+use color_eyre::{eyre::Context, Report, Result};
 use std::{
-    error::Error as StdError,
+    //cell::OnceCell,
     fs::File,
     io::{BufReader, Read},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
-fn torrent_from_file(path: &Path) -> Result<Torrent, Error> {
-    let mut torrent = BufReader::new(File::open(path).map_err(|error| {
-        Error::Custom(format!(
-            "Unable to open file: {}\nWith error: {error}",
-            path.display()
-        ))
-    })?);
+/*const OK: OnceCell<color_eyre::owo_colors::Styled<&str>> =
+    Style::new().bright_green().style("Ok").into();
+*/
 
-    let mut buffer = Vec::new();
-    torrent.read_to_end(&mut buffer).map_err(|error| {
-        Error::Custom(format!(
-            "Failed to read torrent: {}\nWith error: {error}",
-            path.display()
-        ))
-    })?;
-
-    serde_bencode::from_bytes(&buffer)
+/// Deserialize torrent files.
+#[derive(argh::FromArgs)]
+struct Args {
+    /// parse torrents as a map for debugging purposes
+    #[argh(switch, short = 'm')]
+    map: bool,
+    /// paths to torrent files and/or directories of torrent files
+    #[argh(positional)]
+    torrents: Vec<PathBuf>,
 }
 
-fn torrent_directory(path: &Path) -> Result<Vec<Result<Torrent, Error>>, Error> {
+fn torrent_from_file(path: &Path) -> Result<Vec<u8>, Report> {
+    let mut torrent = BufReader::new(
+        File::open(path)
+            .wrap_err_with(|| format!("Unable to open file: {}", path.display().blue()))?,
+    );
+
+    let mut buffer = Vec::new();
+    torrent
+        .read_to_end(&mut buffer)
+        .wrap_err_with(|| (format!("Failed to read torrent: {}", path.display().blue())))?;
+    Ok(buffer)
+}
+
+// Filters for .torrent files.
+fn torrent_directory(path: &Path) -> Result<Vec<PathBuf>, Report> {
     path.read_dir()
-        .map_err(|error| {
-            Error::Custom(format!(
-                "Failed to read directory {}\nWith error: {error}",
-                path.display()
-            ))
-        })?
+        .wrap_err_with(|| (format!("Failed to read directory: {}", path.display().blue())))?
         .filter_map(|maybe_entry| {
             maybe_entry
-                .map_err(|error| {
-                    Error::Custom(format!(
-                        "Failed to read directory entry\nWith error: {error}"
-                    ))
+                .wrap_err_with(|| {
+                    format!(
+                        "Failed to read directory entry at: {}",
+                        path.display().blue()
+                    )
                 })
                 // Filter to remove any non-torrent entries and return the deserialization result.
                 .map(|entry| {
@@ -48,7 +56,7 @@ fn torrent_directory(path: &Path) -> Result<Vec<Result<Torrent, Error>>, Error> 
                     if path.is_file()
                         && path.extension().and_then(|ext| ext.to_str()) == Some("torrent")
                     {
-                        Some(torrent_from_file(&path))
+                        Some(path)
                     } else {
                         None
                     }
@@ -58,32 +66,61 @@ fn torrent_directory(path: &Path) -> Result<Vec<Result<Torrent, Error>>, Error> 
         .collect()
 }
 
-fn print_torrent_result(result: Result<Torrent, Error>, path: &Path) {
-    match result {
-        Ok(torrent) => {
-            println!("Deseralized torrent: {}", torrent.name());
+fn print_torrents(torrent_paths: &[PathBuf]) {
+    let ok = Style::new().bright_green().style("Ok");
+    let err = Style::new().red().style("Err");
+    let error = Style::new().bright_red();
+
+    for path in torrent_paths {
+        match torrent_from_file(path) {
+            Ok(buffer) => {
+                match serde_bencode::from_bytes::<Torrent>(&buffer).wrap_err_with(|| {
+                    format!("Torrent failed to deserialize: {}", path.display().blue())
+                }) {
+                    Ok(torrent) => println!("[{ok}] => {}", torrent.name()),
+                    Err(e) => eprintln!("[{err}] => {}", error.style(e)),
+                }
+            }
+            Err(e) => eprintln!("[{err}] => {:#}", error.style(e)),
         }
-        Err(e) => eprintln!(
-            "Torrent failed to deserialize: {path:?}\nError: {e}, Error source: {}",
-            e.source()
-                .map_or_else(|| "No source".to_string(), |e| e.to_string())
-        ),
+    }
+}
+
+fn deserialize_as_map(torrents: &[PathBuf]) {
+    for path in torrents {
+        match torrent_from_file(&path) {
+            Ok(buffer) => {}
+            Err(e) => {}
+        }
     }
 }
 
 fn main() -> Result<()> {
+    let args: Args = argh::from_env();
     color_eyre::install()?;
     pretty_env_logger::init();
 
-    for arg in std::env::args().skip(1) {
-        let path = Path::new(&arg);
-        if path.is_file() {
-            print_torrent_result(torrent_from_file(path), path);
-        } else {
-            for torrent in torrent_directory(path)? {
-                print_torrent_result(torrent, path)
+    // Flatten directories and single paths into a vector of paths.
+    let torrents: Vec<_> = args
+        .torrents
+        .into_iter()
+        .flat_map(|path| {
+            // An iterator that yields one file if it's a file or a stream of files if it's a dir.
+            // The result is flattened into an iterator of paths that's collected into a vector.
+            if path.is_file() {
+                // I'm sorry.
+                Ok(vec![path])
+            } else {
+                torrent_directory(&path)
             }
-        }
+        })
+        .flatten()
+        .collect();
+
+    if args.map {
+        deserialize_as_map(&torrents)
+    } else {
+        print_torrents(&torrents)
     }
 
     Ok(())

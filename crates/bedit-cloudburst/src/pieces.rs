@@ -1,4 +1,4 @@
-use crate::{crypto::sha1::Sha1Hash, hexadecimal::HexBytes};
+use crate::{crypto::sha1::Sha1, hexadecimal::HexBytes};
 use log::{debug, error};
 use serde::{
     de::{Error as DeError, Unexpected},
@@ -95,7 +95,7 @@ impl Pieces {
     pub fn iter_sha1(&self) -> impl Iterator + '_ {
         self.iter_pieces_bytes().map(|chunk| {
             let bytes: [u8; 20] = chunk.try_into().expect("`Pieces` should always be a multiple of 20 bytes AND chunks_exact() should return a 20 byte chunk.");
-            Sha1Hash::from(bytes)
+            Sha1::from(bytes)
         })
     }
 

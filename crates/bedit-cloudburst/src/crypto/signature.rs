@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+use crate::hexadecimal::HexBytes;
+// use super::rsa::Rsa;
+
 /// Additional info for `Signature`; unused.
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
@@ -18,6 +21,6 @@ pub struct Signature {
     /// Extension info (currently unspecified)
     #[serde(default)]
     info: Option<SignInfo>,
-    /// Signature of torrent's `Info` and `Signature`'s `SignInfo` if present.
-    signature: String,
+    /// RSA signature of torrent's `Info` and `Signature`'s `SignInfo` if present.
+    signature: HexBytes,
 }

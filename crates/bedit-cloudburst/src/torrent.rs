@@ -1,6 +1,6 @@
 use crate::hexadecimal::HexBytes;
 
-use super::{signature::Signature, urlwrapper::UrlWrapper, Info};
+use super::{crypto::signature::Signature, uriwrapper::UriWrapper, Info};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::{HashMap, HashSet};
@@ -31,13 +31,13 @@ pub struct Torrent {
     ///
     /// `announce` is optional because torrent files may preclude them if `nodes` is present.
     #[serde(default)]
-    pub announce: Option<UrlWrapper>,
+    pub announce: Option<UriWrapper>,
     /// Tiers of announce URLs.
     ///
     /// https://www.bittorrent.org/beps/bep_0012.html
     /// The announce URLs are represented as a list of lists of URLs.
     #[serde(default, rename = "announce-list")]
-    pub announce_list: Option<Vec<Vec<UrlWrapper>>>,
+    pub announce_list: Option<Vec<Vec<UriWrapper>>>,
     /// Torrent creator or original uploader.
     #[serde(default, rename = "created by")]
     pub created_by: Option<String>,
@@ -53,7 +53,7 @@ pub struct Torrent {
     /// List of web servers that seed the torrent.
     /// https://www.bittorrent.org/beps/bep_0017.html
     #[serde(default)]
-    pub httpseeds: Option<Vec<String>>,
+    pub httpseeds: Option<Vec<UriWrapper>>,
     /// Torrent info dictionary.
     ///
     /// The info dict contains integral data on the files shared by the torrent.
@@ -70,14 +70,14 @@ pub struct Torrent {
     pub piece_layers: Option<HashMap<HexBytes, HexBytes>>,
     /// Torrent publisher's web site.
     #[serde(default, rename = "publisher-url")]
-    pub publisher_url: Option<UrlWrapper>,
+    pub publisher_url: Option<UriWrapper>,
     /// Signatures for signed torrents.
     #[serde(default)]
     pub signatures: Option<HashMap<String, Signature>>,
     /// A non-standard field similar to [Torrent::httpseeds].
     /// https://getright.com/seedtorrent.html
     #[serde(default, rename = "url-list")]
-    pub url_list: Option<HashSet<UrlWrapper>>,
+    pub url_list: Option<HashSet<UriWrapper>>,
 }
 
 impl Torrent {
@@ -87,8 +87,7 @@ impl Torrent {
     /// use bedit_cloudburst::{Info, MetaV1, Torrent};
     /// use serde_bencode::Error;
     ///
-    /// // let cats = "d8:announce9:localhostd4:info4:name8:cats.mkv6:pieces10:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
-    /// let cats = "d8:announce9:localhostd4:info4:name8:cats.mkv6:pieces10:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0011:piece length:i16eee";
+    /// let cats = "d8:announce9:localhost4:infod4:name8:cats.mkv6:pieces20:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0012:piece lengthi16eee";
     /// let torrent: Torrent = serde_bencode::from_str(cats)?;
     ///
     /// assert_eq!("cats.mkv", torrent.name());

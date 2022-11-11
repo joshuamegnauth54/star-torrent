@@ -1,4 +1,5 @@
 use super::{
+    crypto::{md5::Md5, sha1::Sha1},
     files::{FileTree, SharedFiles},
     pieces::{PieceLength, Pieces},
 };
@@ -39,7 +40,7 @@ pub struct MetaV1 {
     #[serde(default)]
     pub length: Option<NonZeroU64>,
     #[serde(default)]
-    pub md5sum: Option<String>,
+    pub md5sum: Option<Md5>,
     pub name: String,
     pub pieces: Pieces,
     #[serde(rename = "piece length")]
@@ -50,8 +51,6 @@ pub struct MetaV1 {
         serialize_with = "bool_to_int"
     )]
     pub private: bool,
-    #[serde(default, rename = "root hash")]
-    pub root_hash: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -70,6 +69,8 @@ pub struct MetaV2 {
         serialize_with = "bool_to_int"
     )]
     pub private: bool,
+    #[serde(rename = "root hash")]
+    pub root_hash: Sha1,
 }
 
 /// Metainfo on file(s) shared by hybrid torrents.
@@ -98,7 +99,7 @@ pub struct Hybrid {
     pub meta_version: Option<u8>,
     /// Shared file's MD5 hash.
     #[serde(default)]
-    pub md5sum: Option<String>,
+    pub md5sum: Option<Md5>,
     /// Suggested name of the file or subdirectory to which to save multiple files.
     ///
     /// `name` is a suggestion - files or directories don't have to rigidly follow it.
@@ -130,7 +131,7 @@ pub struct Hybrid {
     /// sizes. Instead of a hash per piece, a Merkle torrent contains the root hash of the tree through which
     /// the hashes of the subseqeuent pieces may be derived.
     #[serde(default, rename = "root hash")]
-    pub root_hash: Option<String>,
+    pub root_hash: Option<Sha1>,
 }
 
 /// Deserialize u8 to bool.

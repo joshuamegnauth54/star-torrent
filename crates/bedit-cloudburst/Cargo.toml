@@ -21,13 +21,15 @@ name = "bedit_cloudburst"
 path = "src/lib.rs"
 
 [features]
-binary = ["dep:pretty_env_logger", "dep:color-eyre", "dep:crossterm", "dep:tui"]
+binary = ["dep:argh", "dep:pretty_env_logger", "dep:color-eyre", "dep:crossterm", "dep:tui"]
 
 [dependencies]
+argh = { version = "0.1.9", optional = true }
 arrayvec = { version = "0.7.2", features = ["serde"] }
 color-eyre = { version = "0.6", default-features = false, optional = true }
 crossterm = { version = "0.25", optional = true }
 either = { version = "1.7", features = ["serde"] }
+http = "0.2.8"
 itertools = "0.10.3"
 log = "0.4"
 pretty_env_logger = { version = "0.4", optional = true }
@@ -36,7 +38,6 @@ serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
 serde_with = "2.0.1"
 tui = { version = "0.19", features = ["crossterm"], optional = true }
-url = "2"
 
 [dev-dependencies]
 serde_test = "1.0.144"
