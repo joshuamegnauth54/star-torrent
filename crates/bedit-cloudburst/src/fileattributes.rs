@@ -29,7 +29,7 @@ const FILE_ATTRIBUTE_EXPECTED: [&str; 4] = ["x", "h", "p", "l"];
 ///
 /// Extended file properties are defined in [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html).
 /// Counter to the spec, conversions from [char] and [str] slices are currently fallible. However this may change in the future.
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileAttribute {
     Executable,
     Hidden,
@@ -154,7 +154,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// assert_eq!("hlpx", torrent_attrs.to_string());
 /// # Ok::<(), Error>(())
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TorrentFileAttributes(ArrayVec<FileAttribute, 4>);
 
 impl Display for TorrentFileAttributes {

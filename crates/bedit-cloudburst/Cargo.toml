@@ -32,8 +32,9 @@ either = { version = "1.7", features = ["serde"] }
 http = "0.2.8"
 itertools = "0.10.3"
 log = "0.4"
+md-5 = "0.10.5"
 pretty_env_logger = { version = "0.4", optional = true }
-serde = { version = "1.0.140", features = ["derive"] }
+serde = { version = "1.0.140", features = ["derive", "rc"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.6"
 serde_with = "2.0.1"

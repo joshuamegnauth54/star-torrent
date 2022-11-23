@@ -11,7 +11,7 @@ const MD5_LEN: usize = 16;
 /// MD5 hash wrapper.
 ///
 /// This type wraps one MD5 hash: 128 bits (16 bytes)
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct Md5(HexBytes);
 
