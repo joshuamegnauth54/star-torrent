@@ -151,7 +151,7 @@ impl<'de> Deserialize<'de> for FileTree {
 /// Would be represented as:
 ///
 /// ```rust
-/// use crate::{FileTreePathView, FileTreeInfo};
+/// use bedit_cloudburst::{FileTreePathView, FileTreeInfo};
 ///
 /// let dumbbert = FileTreePathView {
 ///        directory: vec!["./", "alienwarpowers", "models"],
@@ -206,11 +206,24 @@ impl<'iter> Iterator for FileTreeDepthFirstIter<'iter> {
                 }
                 Either::Right(dir) => {
                     // The iterator yielded a directory so the NEXT directory is the old directory with the next path name appended.
-                    let mut directory = directory.clone();
-                    directory.push(name.as_str());
+                    let mut next_directory = directory.clone();
+                    next_directory.push(name.as_str());
+
+                    // Push the current iterator back onto the stack.
+                    self.iters.push_front((directory, cur_iter));
 
                     // As this is depth first, the next iterator is the next directory rather than exhausting the current iterator.
-                    self.iters.push_front((directory, dir.node.iter()));
+                    // The current iterator is now behind the next directory's iterator.
+                    // The stack looks like this where the first entry is the top and it grows downward.
+                    // ------------------------
+                    // V next directory
+                    // V current_directory
+                    // V current_directory - 1
+                    // V current_directory - 2
+                    // V ...
+                    // V root directory
+                    // ------------------------
+                    self.iters.push_front((next_directory, dir.node.iter()));
                     // Call next() to yield the next file. This is recursive and can cause a Stack Overflow with a malicious torrent.
                     // So uh, fix it later.
                     self.next()
@@ -276,7 +289,7 @@ mod tests {
                             new_dir(
                                 "sound",
                                 (0..3)
-                                    .map(|n| new_file(format!("soundlol{n}.wav")))
+                                    .map(|n| new_file(format!("trevor_audio{n}.wav")))
                                     .collect(),
                             ),
                         ],
@@ -284,7 +297,7 @@ mod tests {
                 ),
                 new_dir(
                     "media",
-                    vec![new_file("manual.pdf"), new_file("aliens.pdf")],
+                    vec![new_file("aliens.pdf"), new_file("manual.pdf")],
                 ),
             ]
             .into_iter()
@@ -366,7 +379,53 @@ mod tests {
         let tree = multiple_files_tree();
         let mut tree_view = tree.iter_dfs();
 
-        pls_equal(tree_view.next().unwrap(), "alienwarpowers", vec!["./"]);
+        // Directories
+        let assets_music = vec!["./", "assets", "audio", "music"];
+        let assets_sound = vec!["./", "assets", "audio", "sound"];
+        let media = vec!["./", "media"];
+
+        // Files in root dir
+        pls_equal(
+            tree_view.next().expect("Root files"),
+            "alienwarpowers",
+            vec!["./"],
+        );
+        pls_equal(
+            tree_view.next().expect("Root files"),
+            "alienwarpowers.exe",
+            vec!["./"],
+        );
+
+        // Assets
+        for i in 0..3 {
+            pls_equal(
+                tree_view.next().expect("Jon's music"),
+                &format!("jon_music{i}.mp3"),
+                assets_music.clone(),
+            );
+        }
+        for i in 0..3 {
+            pls_equal(
+                tree_view.next().expect("Sounds"),
+                &format!("trevor_audio{i}.wav"),
+                assets_sound.clone(),
+            );
+        }
+
+        // Media
+        pls_equal(
+            tree_view.next().expect("ALIENS"),
+            "aliens.pdf",
+            media.clone(),
+        );
+        pls_equal(
+            tree_view.next().expect("media/manual.pdf"),
+            "manual.pdf",
+            media.clone(),
+        );
+
+        // Iterator should be exhausted now.
+        assert!(tree_view.next().is_none());
     }
 
     #[test]
