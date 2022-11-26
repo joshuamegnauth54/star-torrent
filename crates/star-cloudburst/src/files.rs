@@ -26,7 +26,7 @@ use std::{
 };
 
 #[cfg(debug_assertions)]
-const FILETREE_DE_TARGET: &str = "bedit_cloudburst::FileTree::deserialize";
+const FILETREE_DE_TARGET: &str = "star_cloudburst::FileTree::deserialize";
 #[cfg(debug_assertions)]
 use log::{debug, error};
 
@@ -77,7 +77,7 @@ pub struct FileTreeInfo {
 /// [FileTreeEntry] should be deserialized as part of the overall torrent parsing process.
 ///
 /// ```
-/// use bedit_cloudburst::FileTreeEntry;
+/// use star_cloudburst::FileTreeEntry;
 /// use serde_bencode::Error;
 ///
 /// let file_de = "d9:cat_videod0:d6:lengthi1024000000e11:pieces root32:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeee";
@@ -116,7 +116,7 @@ impl<'iter> FileTree {
 #[cfg(debug_assertions)]
 impl<'de> Deserialize<'de> for FileTree {
     // This impl is primarily for better error logs during deserialization.
-    // [bedit_cloudburst::Info] is deserialized by matching till a valid variant is found.
+    // [star_cloudburst::Info] is deserialized by matching till a valid variant is found.
     // However, the error from the deserialized types is consumed leading to an entirely non-descriptive message: "data did not match any variant of untagged enum Info"
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -151,7 +151,7 @@ impl<'de> Deserialize<'de> for FileTree {
 /// Would be represented as:
 ///
 /// ```rust
-/// use bedit_cloudburst::{FileTreePathView, FileTreeInfo};
+/// use star_cloudburst::{FileTreePathView, FileTreeInfo};
 ///
 /// let dumbbert = FileTreePathView {
 ///        directory: vec!["./", "alienwarpowers", "models"],
@@ -224,7 +224,7 @@ impl<'iter> Iterator for FileTreeDepthFirstIter<'iter> {
                     // V root directory
                     // ------------------------
                     self.iters.push_front((next_directory, dir.node.iter()));
-                    // Call next() to yield the next file. This is recursive and can cause a Stack Overflow with a malicious torrent.
+                    // Call next() to yield the next file. This is recursive and can cause a stack overflow with a malicious torrent.
                     // So uh, fix it later.
                     self.next()
                 }
@@ -277,23 +277,32 @@ mod tests {
                 new_file("alienwarpowers.exe"),
                 new_dir(
                     "assets",
-                    vec![new_dir(
-                        "audio",
-                        vec![
-                            new_dir(
-                                "music",
-                                (0..3)
-                                    .map(|n| new_file(format!("jon_music{n}.mp3")))
-                                    .collect(),
-                            ),
-                            new_dir(
-                                "sound",
-                                (0..3)
-                                    .map(|n| new_file(format!("trevor_audio{n}.wav")))
-                                    .collect(),
-                            ),
-                        ],
-                    )],
+                    vec![
+                        new_file("assets.toml"),
+                        new_dir(
+                            "audio",
+                            vec![
+                                new_dir(
+                                    "music",
+                                    (0..3)
+                                        .map(|n| new_file(format!("jon_music{n}.mp3")))
+                                        .collect(),
+                                ),
+                                new_dir(
+                                    "sound",
+                                    (0..3)
+                                        .map(|n| new_file(format!("trevor_audio{n}.wav")))
+                                        .collect(),
+                                ),
+                            ],
+                        ),
+                        new_dir(
+                            "graphics",
+                            (0..3)
+                                .map(|n| new_file(format!("kebin_mod{n}.mdl")))
+                                .collect(),
+                        ),
+                    ],
                 ),
                 new_dir(
                     "media",
@@ -374,14 +383,17 @@ mod tests {
         );
     }
 
+    // Test a basic file tree with a few nested directories and root files.
     #[test]
     fn filetree_multiple_iter_depth() {
         let tree = multiple_files_tree();
         let mut tree_view = tree.iter_dfs();
 
         // Directories
+        let assets = vec!["./", "assets"];
         let assets_music = vec!["./", "assets", "audio", "music"];
         let assets_sound = vec!["./", "assets", "audio", "sound"];
+        let assets_graphics = vec!["./", "assets", "graphics"];
         let media = vec!["./", "media"];
 
         // Files in root dir
@@ -397,6 +409,11 @@ mod tests {
         );
 
         // Assets
+        pls_equal(
+            tree_view.next().expect("assets.toml should be first"),
+            "assets.toml",
+            assets.clone(),
+        );
         for i in 0..3 {
             pls_equal(
                 tree_view.next().expect("Jon's music"),
@@ -406,9 +423,16 @@ mod tests {
         }
         for i in 0..3 {
             pls_equal(
-                tree_view.next().expect("Sounds"),
+                tree_view.next().expect("Trevor's audio"),
                 &format!("trevor_audio{i}.wav"),
                 assets_sound.clone(),
+            );
+        }
+        for i in 0..3 {
+            pls_equal(
+                tree_view.next().expect("Kevin's models"),
+                &format!("kebin_mod{i}.mdl"),
+                assets_graphics.clone(),
             );
         }
 
@@ -430,6 +454,54 @@ mod tests {
 
     #[test]
     fn filetree_dirs_o_fun() {
-        //(0..100).fold()
+        let allen_dos = "allen_dos".to_owned();
+
+        // Initial element is a tree consisting of one file.
+        let tree = std::iter::once((
+            allen_dos.clone(),
+            FileTreeEntry(Either::Right(FileTree {
+                node: [new_file("allen_signature")].into_iter().collect(),
+            })),
+        ))
+        .chain(std::iter::repeat((
+            allen_dos.clone(),
+            FileTreeEntry(Either::Right(FileTree {
+                node: Default::default(),
+            })),
+        )))
+        .take(100)
+        // Reduce by building the tree from the leaves downward.
+        .reduce(
+            |(consume_name, consume_entry), (accum_name, mut accum_entry)| {
+                accum_entry
+                    .0
+                    .as_mut()
+                    .unwrap_right()
+                    .node
+                    .insert(consume_name, consume_entry);
+                (accum_name, accum_entry)
+            },
+        )
+        .expect("Built, nested tree of directories.");
+
+        // The tree; the iterator above reduces to (String, FileTreeEntry)
+        let tree = FileTree {
+            node: [tree].into(),
+        };
+
+        // 100 directories of Allen spam
+        let allen_dos_dir = std::iter::once("./")
+            .chain(std::iter::repeat(allen_dos.as_str()))
+            .take(101)
+            .collect();
+
+        // And now yield the one file.
+        pls_equal(
+            tree.iter_dfs()
+                .next()
+                .expect("If this doesn't overflow, Allen's DOS attack signature should be yielded"),
+            "allen_signature",
+            allen_dos_dir,
+        );
     }
 }

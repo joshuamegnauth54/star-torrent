@@ -5,7 +5,7 @@ use log::{debug, error};
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
-const MD5HASH_DE_TARGET: &str = "bedit_cloudburst::crypto::md5::Md5::deserialize";
+const MD5HASH_DE_TARGET: &str = "star_cloudburst::crypto::md5::Md5::deserialize";
 const MD5_LEN: usize = 16;
 
 /// MD5 hash wrapper.

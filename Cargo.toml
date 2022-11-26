@@ -1,10 +1,10 @@
 [package]
-name = "benitor"
-description = "Ben + Editor = benitor. Benitor edits torrents, resume files, and configs."
+name = "star-torrent"
+description = "Star torrent is a BitTorrent client."
 authors = ["Joshua Megnauth <>"]
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/joshuamegnauth54/benitor/"
+repository = "https://github.com/joshuamegnauth54/star-torrent/"
 license = "MIT"
 keywords = ["torrent", "parse", "cross-platform", "gui", "p2p"]
 categories = ["config", "parsing"]
@@ -17,14 +17,12 @@ lto = true
 members = ["crates/*"]
 
 [features]
-default = ["settings-editor", "gui", "logging"]
+default = ["gui", "logging"]
 logging = ["dep:log", "dep:pretty_env_logger"]
-settings-editor = ["bedit-settings"]
 gui = ["iced"]
 
 [dependencies]
-bedit-cloudburst = { path = "crates/bedit-cloudburst" }
-bedit-settings = { path = "crates/bedit-settings", optional = true }
+star-cloudburst = { path = "crates/star-cloudburst" }
 iced = { version = "0.4.2", optional = true }
 log = { version = "0.4", optional = true }
 pretty_env_logger = { version = "0.4", optional = true }

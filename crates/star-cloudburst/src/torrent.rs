@@ -84,7 +84,7 @@ impl Torrent {
     /// Suggested name of the torrent file or directory.
     ///
     /// ```rust
-    /// use bedit_cloudburst::{Info, MetaV1, Torrent};
+    /// use star_cloudburst::{Info, MetaV1, Torrent};
     /// use serde_bencode::Error;
     ///
     /// let cats = "d8:announce9:localhost4:infod4:name8:cats.mkv6:pieces20:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0012:piece lengthi16eee";

@@ -11,7 +11,7 @@ use serde::{
 use serde_with::skip_serializing_none;
 use std::num::{NonZeroU64, NonZeroU8};
 
-const BOOLFROMINT_DE_TARGET: &str = "bedit_cloudburst::info::bool_from_int";
+const BOOLFROMINT_DE_TARGET: &str = "star_cloudburst::info::bool_from_int";
 
 /// Metainfo on files shared by torrents.
 ///

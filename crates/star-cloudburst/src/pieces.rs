@@ -6,8 +6,8 @@ use serde::{
 };
 use std::num::NonZeroU64;
 
-const PIECES_DE_TARGET: &str = "bedit_cloudburst::Piece::deserialize";
-const PIECELENGTH_DE_TARGET: &str = "bedit_cloudburst::PieceLength::deserialize";
+const PIECES_DE_TARGET: &str = "star_cloudburst::Piece::deserialize";
+const PIECELENGTH_DE_TARGET: &str = "star_cloudburst::PieceLength::deserialize";
 
 /// Number of bytes per piece.
 ///

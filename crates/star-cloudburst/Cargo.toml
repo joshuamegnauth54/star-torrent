@@ -1,13 +1,13 @@
 [package]
-name = "bedit-cloudburst"
-description = "Helper structs for serializing and deserializing torrents for benitor."
+name = "star-cloudburst"
+description = "Torrent serializer and deserializer built on top of Serde for Star Torrent."
 authors = ["Joshua Megnauth <>"]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
-repository = "https://github.com/joshuamegnauth54/benitor/"
+repository = "https://github.com/joshuamegnauth54/star-torrent/"
 license = "MIT"
 keywords = ["torrent", "parse", "cross-platform"]
-categories = ["config", "parsing"]
+categories = ["config", "encoding"]
 
 [[bin]]
 name = "cloudburst"
@@ -17,11 +17,17 @@ test = false
 bench = false
 
 [lib]
-name = "bedit_cloudburst"
+name = "star_cloudburst"
 path = "src/lib.rs"
 
 [features]
-binary = ["dep:argh", "dep:pretty_env_logger", "dep:color-eyre", "dep:crossterm", "dep:tui"]
+binary = [
+    "dep:argh",
+    "dep:pretty_env_logger",
+    "dep:color-eyre",
+    "dep:crossterm",
+    "dep:tui",
+]
 
 [dependencies]
 argh = { version = "0.1.9", optional = true }

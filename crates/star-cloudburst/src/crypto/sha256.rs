@@ -5,7 +5,7 @@ use log::{debug, error};
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
-const SHA256_DE_TARGET: &str = "bedit_cloudburst::crypto::sha256::Sha256::deserialize";
+const SHA256_DE_TARGET: &str = "star_cloudburst::crypto::sha256::Sha256::deserialize";
 const SHA256_LEN: usize = 32;
 
 /// SHA256 hash wrapper.

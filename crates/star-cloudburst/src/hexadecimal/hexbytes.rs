@@ -10,7 +10,7 @@ use std::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 const HEX_LOWER: &str = "0123456789abcdef";
 // const HEX_UPPER: &str = "0123456789ABCDEF";
 const HEX_EXPECTED: &str = "valid hexadecimal characters [0-9, a-f, A-F]";
-const FROMHEXSTR_TARGET: &str = "bedit_cloudburst::hexadecimal::HexBytes::from_hex_str";
+const FROMHEXSTR_TARGET: &str = "star_cloudburst::hexadecimal::HexBytes::from_hex_str";
 
 // Map valid hex character to 0-15
 fn hex_to_byte(ch: char) -> Result<u8, DeError> {
@@ -39,7 +39,7 @@ impl HexBytes {
     ///
     /// # Examples
     /// ```
-    /// use bedit_cloudburst::hexadecimal::HexBytes;
+    /// use star_cloudburst::hexadecimal::HexBytes;
     /// use serde::de::value::Error;
     ///
     /// let james_hoffman = "cafeD00d";
@@ -59,7 +59,7 @@ impl HexBytes {
     ///
     /// Oops.
     /// ```
-    /// use bedit_cloudburst::hexadecimal::HexBytes;
+    /// use star_cloudburst::hexadecimal::HexBytes;
     ///
     /// let giraffe = "*giraffe noises* 🦒";
     /// let hexraffe = HexBytes::from_hex_str(giraffe);
@@ -109,7 +109,6 @@ impl HexBytes {
         }
     }
 
-
     #[inline]
     pub(crate) fn new(bytes: ByteBuf) -> Self {
         // For some reason, probably due to my own idiocy, I can't use Into to construct HexBytes.
@@ -119,7 +118,7 @@ impl HexBytes {
     /// Returns the amount of bytes stored.
     ///
     /// ```rust
-    /// use bedit_cloudburst::hexadecimal::HexBytes;
+    /// use star_cloudburst::hexadecimal::HexBytes;
     /// use serde::de::value::Error;
     ///
     /// let bytes = HexBytes::from_hex_str("dead")?;

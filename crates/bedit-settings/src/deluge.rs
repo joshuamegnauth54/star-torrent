@@ -1,2 +1,0 @@
-mod resume;
-mod settings;

@@ -1,4 +1,4 @@
-use bedit_cloudburst::Torrent;
+use star_cloudburst::Torrent;
 use std::{env, error::Error, fs};
 
 #[test]

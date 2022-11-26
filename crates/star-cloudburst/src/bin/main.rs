@@ -1,8 +1,8 @@
 #![feature(once_cell)]
 
-use bedit_cloudburst::Torrent;
 use color_eyre::owo_colors::{OwoColorize, Style};
 use color_eyre::{eyre::Context, Report, Result};
+use star_cloudburst::Torrent;
 use std::{
     //cell::OnceCell,
     fs::File,
