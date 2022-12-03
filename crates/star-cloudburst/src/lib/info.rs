@@ -1,6 +1,6 @@
 use super::{
     crypto::{md5::Md5, sha1::Sha1},
-    files::{FileTree, SharedFiles},
+    files::{FileTree, FlatFiles},
     pieces::{PieceLength, Pieces},
 };
 use log::debug;
@@ -36,7 +36,7 @@ pub enum Info {
 #[serde(deny_unknown_fields)]
 pub struct MetaV1 {
     #[serde(default)]
-    pub files: Option<Vec<SharedFiles>>,
+    pub files: Option<Vec<FlatFiles>>,
     #[serde(default)]
     pub length: Option<NonZeroU64>,
     #[serde(default)]
@@ -82,7 +82,7 @@ pub struct MetaV2 {
 pub struct Hybrid {
     /// Files shared by version 1 or hybrid torrents.
     #[serde(default)]
-    pub files: Option<Vec<SharedFiles>>,
+    pub files: Option<Vec<FlatFiles>>,
     /// Version 2 or hybrid styled file dictionaries.
     #[serde(default, rename = "file tree")]
     pub file_tree: Option<FileTree>,

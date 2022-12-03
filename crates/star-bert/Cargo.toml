@@ -1,0 +1,16 @@
+[package]
+name = "star-bert"
+description = "BERT Encodes Rusty Torrents"
+authors = ["Joshua Megnauth <>"]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/joshuamegnauth54/star-torrent"
+license = "MIT"
+keywords = ["bencode", "parse", "torrent"]
+categories = ["encoding", "parser-implementations"]
+
+[dependencies]
+nom = "7.1.1"
+serde = "1.0.147"
+serde_bytes = "0.11.7"
+thiserror = "1.0"

@@ -1,6 +1,5 @@
-use crate::hexadecimal::HexBytes;
-
-use super::{crypto::signature::Signature, uriwrapper::UriWrapper, Info};
+use super::{crypto::signature::Signature, uri::uriwrapper::UriWrapper, Info};
+use crate::{hexadecimal::HexBytes, uri::Node};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::{HashMap, HashSet};
@@ -9,14 +8,6 @@ use std::collections::{HashMap, HashSet};
 // https://en.wikipedia.org/wiki/Torrent_file#File_structure
 // https://github.com/toby/serde-bencode/blob/master/examples/parse_torrent.rs
 // https://wiki.theory.org/BitTorrentSpecification
-
-/// A [`Node`] is (host, port) pair that can be provided through DHT.
-///
-/// [BEP-0005](https://www.bittorrent.org/beps/bep_0005.html)
-///
-/// [`Node`]s are not limited to socket addresses but may also be URLs.
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Node((String, u32));
 
 /// Torrent metadata such as the announce urls or DHT [`Node`]s.
 ///

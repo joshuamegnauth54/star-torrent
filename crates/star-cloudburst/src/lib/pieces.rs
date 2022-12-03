@@ -4,7 +4,7 @@ use serde::{
     de::{Error as DeError, Unexpected},
     Deserialize, Deserializer, Serialize,
 };
-use std::num::NonZeroU64;
+use std::{fmt::Debug, num::NonZeroU64};
 
 const PIECES_DE_TARGET: &str = "star_cloudburst::Piece::deserialize";
 const PIECELENGTH_DE_TARGET: &str = "star_cloudburst::PieceLength::deserialize";

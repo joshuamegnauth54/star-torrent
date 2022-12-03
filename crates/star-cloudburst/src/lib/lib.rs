@@ -1,16 +1,13 @@
-//! `bedit-cloudburst` provides strongly typed data structures for serializing and deserializing torrents.
+//! `star-cloudburst` provides strongly typed data structures for serializing and deserializing torrents.
 
 pub mod crypto;
-mod fileattributes;
-mod files;
+pub mod files;
 pub mod hexadecimal;
-mod info;
-mod pieces;
-mod torrent;
-mod uriwrapper;
+pub mod info;
+pub mod pieces;
+pub mod torrent;
+pub mod uri;
 
-pub use fileattributes::{FileAttribute, TorrentFileAttributes};
-pub use files::{FileTree, FileTreeEntry, FileTreeInfo, FileTreePathView, SharedFiles};
 pub use info::{Hybrid, Info, MetaV1, MetaV2};
 pub use pieces::{PieceLength, Pieces};
-pub use torrent::{Node, Torrent};
+pub use torrent::Torrent;

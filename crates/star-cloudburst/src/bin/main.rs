@@ -20,6 +20,9 @@ struct Args {
     /// parse torrents as a map for debugging purposes
     #[argh(switch, short = 'm')]
     map: bool,
+    /// verbose print torrents
+    #[argh(switch, short = 'v')]
+    verbose: bool,
     /// paths to torrent files and/or directories of torrent files
     #[argh(positional)]
     torrents: Vec<PathBuf>,
@@ -66,7 +69,7 @@ fn torrent_directory(path: &Path) -> Result<Vec<PathBuf>, Report> {
         .collect()
 }
 
-fn print_torrents(torrent_paths: &[PathBuf]) {
+fn print_torrents(torrent_paths: &[PathBuf], verbose: bool) {
     let ok = Style::new().bright_green().style("Ok");
     let err = Style::new().red().style("Err");
     let error = Style::new().bright_red();
@@ -77,7 +80,13 @@ fn print_torrents(torrent_paths: &[PathBuf]) {
                 match serde_bencode::from_bytes::<Torrent>(&buffer).wrap_err_with(|| {
                     format!("Torrent failed to deserialize: {}", path.display().blue())
                 }) {
-                    Ok(torrent) => println!("[{ok}] => {}", torrent.name()),
+                    Ok(torrent) => {
+                        if !verbose {
+                            println!("[{ok}] => {}", torrent.name())
+                        } else {
+                            println!("[{ok}] => {torrent:#?}")
+                        }
+                    }
                     Err(e) => eprintln!("[{err}] => {}", error.style(e)),
                 }
             }
@@ -120,7 +129,7 @@ fn main() -> Result<()> {
     if args.map {
         deserialize_as_map(&torrents)
     } else {
-        print_torrents(&torrents)
+        print_torrents(&torrents, args.verbose)
     }
 
     Ok(())

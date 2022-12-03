@@ -121,7 +121,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// # Examples
 /// Deserialize to a strongly typed `struct` and back to a [String].
 /// ```
-/// use star_cloudburst::TorrentFileAttributes;
+/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::{Deserialize, Serialize};
 /// use serde_bencode::Error;
 ///
@@ -134,7 +134,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// Deserialization drops duplicates and sorts the result.
 /// ```
-/// use star_cloudburst::TorrentFileAttributes;
+/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::Deserialize;
 /// use serde_bencode::Error;
 ///
@@ -146,7 +146,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// [TryFrom] is implemented for [TorrentFileAttributes].
 /// ```
-/// use star_cloudburst::TorrentFileAttributes;
+/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::de::value::Error;
 ///
 /// let attrs = "hlpx";

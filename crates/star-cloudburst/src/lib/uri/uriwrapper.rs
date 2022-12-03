@@ -1,12 +1,24 @@
 use http::uri::Uri;
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
-    borrow::Cow,
+    borrow::{Borrow, Cow},
     fmt::{self, Display, Formatter},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UriWrapper(Uri);
+
+impl UriWrapper {
+    #[inline]
+    pub(crate) fn from_uri_unchecked(uri: Uri) -> Self {
+        Self(uri)
+    }
+
+    #[inline]
+    pub(crate) fn into_inner(self) -> Uri {
+        self.0
+    }
+}
 
 impl<'de> Deserialize<'de> for UriWrapper {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -44,6 +56,13 @@ impl Display for UriWrapper {
     }
 }
 
+impl Borrow<Uri> for UriWrapper {
+    #[inline]
+    fn borrow(&self) -> &Uri {
+        &self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::UriWrapper;
@@ -52,6 +71,7 @@ mod tests {
     const EXAMPLE_OK: &str = "https://example.com/";
     const EXAMPLE_BAD: &str = "/etc/shadow";
     const EXAMPLE_TRACKER: &str = "udp://somefakesitemeow.faketld:666/announce";
+    const EXAMPLE_FILE: &str = "file:///home/joshua/Documents/Essays/why_i_like_mudkips.tex";
 
     #[test]
     fn uriwrapper_okay() {
@@ -70,6 +90,14 @@ mod tests {
         assert_de_tokens_error::<UriWrapper>(
             &[Token::String(EXAMPLE_BAD)],
             "relative URL without a base",
+        )
+    }
+
+    #[test]
+    fn uriwrapper_mudkips() {
+        assert_de_tokens_error::<UriWrapper>(
+            &[Token::String(EXAMPLE_FILE)],
+            "invalid scheme: `file`",
         )
     }
 }

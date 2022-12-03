@@ -1,3 +1,7 @@
+# 0.8.0
+- Refactor into a more modularized style instead of re-exporting everything.
+- Reimplement `Node` in terms of `UriWrapper` with non-roundtrip ser/deserialization. This allows for a consistent type instead of having to make a URI for sockets.
+
 # 0.7.0
 - Rename `benitor` to `star-torrent` and split out `benitor` into its own repo.
 - Move `cloudburst`'s `lib` target into a `lib` folder.
