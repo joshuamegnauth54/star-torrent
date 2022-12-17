@@ -17,7 +17,7 @@ use std::{
 #[cfg(debug_assertions)]
 const FILETREE_DE_TARGET: &str = "star_cloudburst::files::FileTree::deserialize";
 #[cfg(debug_assertions)]
-use log::{debug, error};
+use log::{debug, error, trace};
 
 /// File info for version 2.0 torrents.
 ///
@@ -31,6 +31,7 @@ pub struct FileTreeInfo {
     #[serde(default)]
     pub attr: Option<TorrentFileAttributes>,
     /// Length of the file in bytes.
+    /// This field is only present for files not directories hence why it is not `Option<NonZeroU64>`.
     pub length: NonZeroU64,
     /// Merkel tree root as a SHA256 hash.
     #[serde(default, rename = "pieces root")]
@@ -88,7 +89,7 @@ impl<'de> Deserialize<'de> for FileTree {
     where
         D: serde::Deserializer<'de>,
     {
-        debug!(target: FILETREE_DE_TARGET, "Deserializing `FileTree`.");
+        trace!(target: FILETREE_DE_TARGET, "Deserializing `FileTree`.");
         let node = match BTreeMap::<String, FileTreeEntry>::deserialize(deserializer) {
             Ok(node) => node,
             Err(e) => {

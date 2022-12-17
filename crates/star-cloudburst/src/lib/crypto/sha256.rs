@@ -1,8 +1,8 @@
 //! SHA256 hash.
 
 use crate::hexadecimal::HexBytes;
-use log::{debug, error};
-use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
+use log::{error, trace};
+use serde::{de::Error as DeErrorTrait, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 const SHA256_DE_TARGET: &str = "star_cloudburst::crypto::sha256::Sha256::deserialize";
@@ -33,7 +33,7 @@ impl<'de> Deserialize<'de> for Sha256 {
     where
         D: Deserializer<'de>,
     {
-        debug!(target: SHA256_DE_TARGET, "Deserializing a SHA256 hash.");
+        trace!(target: SHA256_DE_TARGET, "Deserializing a SHA256 hash.");
 
         let bytes = HexBytes::deserialize(deserializer)?;
         let len = bytes.len();
@@ -44,7 +44,7 @@ impl<'de> Deserialize<'de> for Sha256 {
                 "Invalid SHA256 hash size: {len} - but should be {SHA256_LEN}"
             );
 
-            Err(DeError::invalid_length(len, &"32"))
+            Err(DeErrorTrait::invalid_length(len, &"32"))
         } else {
             Ok(Sha256(bytes))
         }

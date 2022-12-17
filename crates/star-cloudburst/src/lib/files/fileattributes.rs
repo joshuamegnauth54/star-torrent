@@ -9,7 +9,7 @@
 use arrayvec::ArrayVec;
 use itertools::Itertools;
 use serde::{
-    de::{value::Error, Error as DeErrorTrait},
+    de::{value::Error as DeError, Error as DeErrorTrait},
     Deserialize, Serialize,
 };
 use std::fmt::{self, Display, Formatter};
@@ -38,7 +38,7 @@ pub enum FileAttribute {
 }
 
 impl TryFrom<char> for FileAttribute {
-    type Error = Error;
+    type Error = DeError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase() {
@@ -55,7 +55,7 @@ impl TryFrom<char> for FileAttribute {
 }
 
 impl TryFrom<&str> for FileAttribute {
-    type Error = Error;
+    type Error = DeError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         // Not using to_lowercase() because it returns a String.
@@ -101,7 +101,7 @@ impl<'de> Deserialize<'de> for FileAttribute {
         let maybe_attr = char::deserialize(deserializer)?;
         maybe_attr
             .try_into()
-            // To do: Can't constraint the type of D::Error to DeError yet.
+            // To do: Can't constrain the type of D::Error to DeErrorTrait yet.
             .map_err(|_| {
                 D::Error::unknown_variant(&maybe_attr.to_string(), &FILE_ATTRIBUTE_EXPECTED)
             })
@@ -170,7 +170,7 @@ impl Display for TorrentFileAttributes {
 }
 
 impl TryFrom<&str> for TorrentFileAttributes {
-    type Error = Error;
+    type Error = DeError;
 
     // Convert a &str containing any case insensitive combination of 'x', 'h', 'p', 'l'
     // to a vector of [FileAttribute].

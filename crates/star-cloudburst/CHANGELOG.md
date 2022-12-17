@@ -1,6 +1,8 @@
 # 0.8.0
 - Refactor into a more modularized style instead of re-exporting everything.
 - Reimplement `Node` in terms of `UriWrapper` with non-roundtrip ser/deserialization. This allows for a consistent type instead of having to make a URI for sockets.
+- Switch some of the noisier `debug!` to `trace!`.
+- Improve consistency of `use` statements with respect to `serde::de::Error` and `serde::de::value::Error`. The former should always be aliased as `DeErrorTrait` while the latter should be imported as `DeError`.
 
 # 0.7.0
 - Rename `benitor` to `star-torrent` and split out `benitor` into its own repo.

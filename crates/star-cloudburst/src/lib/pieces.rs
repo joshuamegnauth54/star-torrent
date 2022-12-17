@@ -1,7 +1,7 @@
 use crate::{crypto::sha1::Sha1, hexadecimal::HexBytes};
-use log::{debug, error};
+use log::{error, trace};
 use serde::{
-    de::{Error as DeError, Unexpected},
+    de::{Error as DeErrorTrait, Unexpected},
     Deserialize, Deserializer, Serialize,
 };
 use std::{fmt::Debug, num::NonZeroU64};
@@ -21,7 +21,7 @@ impl<'de> Deserialize<'de> for PieceLength {
     where
         D: Deserializer<'de>,
     {
-        debug!(target: PIECELENGTH_DE_TARGET, "Deserializing PieceLength.");
+        trace!(target: PIECELENGTH_DE_TARGET, "Deserializing PieceLength.");
 
         let piece_length = NonZeroU64::deserialize(deserializer)?;
 
@@ -32,7 +32,7 @@ impl<'de> Deserialize<'de> for PieceLength {
                 target: PIECELENGTH_DE_TARGET,
                 "Invalid piece length: {piece_length}."
             );
-            Err(DeError::invalid_value(
+            Err(DeErrorTrait::invalid_value(
                 Unexpected::Unsigned(piece_length.into()),
                 &"piece length should be greater than 16 and a power of two",
             ))
@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for Pieces {
     where
         D: Deserializer<'de>,
     {
-        debug!(target: PIECES_DE_TARGET, "Deserializing Pieces.");
+        trace!(target: PIECES_DE_TARGET, "Deserializing Pieces.");
 
         // This is already a byte string so I can't really validate it.
         let pieces: HexBytes = match serde_bytes::ByteBuf::deserialize(deserializer) {
@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for Pieces {
                 target: PIECES_DE_TARGET,
                 "Pieces should be a multiple of twenty; got: {len}"
             );
-            Err(DeError::invalid_length(
+            Err(DeErrorTrait::invalid_length(
                 len,
                 &"length of `pieces` should be a multiple of 20",
             ))

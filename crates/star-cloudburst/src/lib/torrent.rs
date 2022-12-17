@@ -1,8 +1,13 @@
-use super::{crypto::signature::Signature, uri::uriwrapper::UriWrapper, Info};
-use crate::{hexadecimal::HexBytes, uri::Node};
+use crate::{
+    crypto::signature::Signature, hexadecimal::HexBytes, metainfo::MetaInfo,
+    uri::uriwrapper::UriWrapper, uri::Node,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::{self, Display, Formatter},
+};
 
 // Based on BEPs as well as:
 // https://en.wikipedia.org/wiki/Torrent_file#File_structure
@@ -49,7 +54,7 @@ pub struct Torrent {
     ///
     /// The info dict contains integral data on the files shared by the torrent.
     /// This includes suggested names as well as file hashes.
-    pub info: Info,
+    pub info: MetaInfo,
     /// Nodes for distributed hash tables (DHT).
     ///
     /// `nodes` is required for a tracker-less torrent file but optional otherwise.
@@ -74,8 +79,9 @@ pub struct Torrent {
 impl Torrent {
     /// Suggested name of the torrent file or directory.
     ///
+    /// Example for a single file:
     /// ```rust
-    /// use star_cloudburst::{Info, MetaV1, Torrent};
+    /// use star_cloudburst::{metainfo::{MetaInfo, MetaV1}, Torrent};
     /// use serde_bencode::Error;
     ///
     /// let cats = "d8:announce9:localhost4:infod4:name8:cats.mkv6:pieces20:\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0012:piece lengthi16eee";
@@ -86,9 +92,17 @@ impl Torrent {
     /// ```
     pub fn name(&self) -> &str {
         match self.info {
-            Info::MetaV1(ref dict) => dict.name.as_str(),
-            Info::MetaV2(ref dict) => dict.name.as_str(),
-            Info::Hybrid(ref dict) => dict.name.as_str(),
+            MetaInfo::MetaV1(ref dict) => dict.name.as_str(),
+            MetaInfo::MetaV2(ref dict) => dict.name.as_str(),
+            MetaInfo::Hybrid(ref dict) => dict.name.as_str(),
         }
+    }
+}
+
+impl Display for Torrent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct(&format!("Torrent: {}", self.name()))
+            .field("Meta Info", &self.info)
+            .finish()
     }
 }

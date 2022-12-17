@@ -2,7 +2,7 @@
 
 use crate::hexadecimal::HexBytes;
 use log::{debug, error};
-use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
+use serde::{de::Error as DeErrorTrait, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 const SHA1HASH_DE_TARGET: &str = "star_cloudburst::crypto::sha1::Sha1::deserialize";
@@ -53,7 +53,7 @@ impl<'de> Deserialize<'de> for Sha1 {
                 target: SHA1HASH_DE_TARGET,
                 "Invalid SHA1 hash length: {len} - but should be {SHA1_LEN}."
             );
-            Err(DeError::invalid_length(len, &"20"))
+            Err(DeErrorTrait::invalid_length(len, &"20"))
         } else {
             Ok(Sha1(bytes))
         }

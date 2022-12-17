@@ -6,11 +6,13 @@
 //! Compared to version 1 torrents, version 2 torrents may be smaller in size due to [filetree::FileTree]s deduplicating paths.
 
 pub mod fileattributes;
+pub mod filedisplayinfo;
 pub mod filetree;
-pub mod flatfiles;
+pub mod flatfile;
 
 pub use fileattributes::{FileAttribute, TorrentFileAttributes};
+pub use filedisplayinfo::FileDisplayInfo;
 pub use filetree::{
     FileTree, FileTreeDepthFirstIter, FileTreeEntry, FileTreeInfo, FileTreePathView,
 };
-pub use flatfiles::FlatFiles;
+pub use flatfile::{FlatFile, MetaV1FileRepr};

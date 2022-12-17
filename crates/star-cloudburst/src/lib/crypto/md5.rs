@@ -1,8 +1,8 @@
 //! MD5 hash.
 
 use crate::hexadecimal::HexBytes;
-use log::{debug, error};
-use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
+use log::{error, trace};
+use serde::{de::Error as DeErrorTrait, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 const MD5HASH_DE_TARGET: &str = "star_cloudburst::crypto::md5::Md5::deserialize";
@@ -34,7 +34,7 @@ impl<'de> Deserialize<'de> for Md5 {
     where
         D: Deserializer<'de>,
     {
-        debug!(target: MD5HASH_DE_TARGET, "Deserializing an MD5 hash.");
+        trace!(target: MD5HASH_DE_TARGET, "Deserializing an MD5 hash.");
 
         let bytes = HexBytes::deserialize(deserializer)?;
         let len = bytes.len();
@@ -45,7 +45,7 @@ impl<'de> Deserialize<'de> for Md5 {
                 "Invalid MD5 hash length: {len} - but should be {MD5_LEN}."
             );
 
-            Err(DeError::invalid_length(len, &"16"))
+            Err(DeErrorTrait::invalid_length(len, &"16"))
         } else {
             Ok(Md5(bytes))
         }

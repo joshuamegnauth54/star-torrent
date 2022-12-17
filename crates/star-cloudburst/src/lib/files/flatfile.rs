@@ -7,17 +7,20 @@ use serde_with::skip_serializing_none;
 use std::{num::NonZeroU64, path::PathBuf};
 
 /// Files shared by the torrent if multiple as per meta version 1.
+/// Meta version 1 represents files in a flattened structure where `path` represents the full
+/// path of the file including the directory and the name. Files in the same directory repeat the directory
+/// strings per file.
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
-pub struct FlatFiles {
+pub struct FlatFile {
     /// File attribute such as whether the file is executable or hidden.
     #[serde(default)]
     pub attr: Option<TorrentFileAttributes>,
     /// Length of the file in bytes.
     pub length: NonZeroU64,
     /// List of UTF-8 strings consisting of subdirectory names where the last string is the file name.
-    pub path: Vec<PathBuf>,
+    pub path: Vec<String>,
     /// Checksum for the shared file.
     #[serde(default)]
     pub md5sum: Option<Md5>,
@@ -27,4 +30,29 @@ pub struct FlatFiles {
     /// Paths for symbolic links.
     #[serde(default, rename = "symlink path")]
     pub symlink_path: Option<Vec<String>>,
+}
+
+/// Does this torrent share multiple files or a single file?
+///
+/// Meta version 1 represents multiple files with a list of [FlatFile].
+/// Single file torrents only include a `length` field with `name` indicating the suggested name of the file.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "untagged")]
+pub enum MetaV1FileRepr {
+    #[serde(rename = "files")]
+    Multiple(Vec<FlatFile>),
+    #[serde(rename = "length")]
+    Single(NonZeroU64),
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_test::{assert_tokens, Token};
+    use serde::{Deserialize, Serialize};
+    use super::{MetaV1FileRepr, FlatFile};
+
+    #[derive(Deserialize, Serialize)]
+    struct LameV1Files {
+        files: MetaV1FileRepr
+    }
 }
