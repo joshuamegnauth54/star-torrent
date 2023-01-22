@@ -36,7 +36,7 @@ pub struct FlatFile {
 ///
 /// Meta version 1 represents multiple files with a list of [FlatFile].
 /// Single file torrents only include a `length` field with `name` indicating the suggested name of the file.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "untagged")]
 pub enum MetaV1FileRepr {
     #[serde(rename = "files")]
@@ -47,12 +47,74 @@ pub enum MetaV1FileRepr {
 
 #[cfg(test)]
 mod tests {
-    use serde_test::{assert_tokens, Token};
+    use super::{FlatFile, MetaV1FileRepr};
     use serde::{Deserialize, Serialize};
-    use super::{MetaV1FileRepr, FlatFile};
+    use serde_test::{assert_de_tokens, assert_tokens, Token};
 
-    #[derive(Deserialize, Serialize)]
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
     struct LameV1Files {
-        files: MetaV1FileRepr
+        files: MetaV1FileRepr,
+    }
+
+    fn fake_file() -> FlatFile {
+        FlatFile {
+            attr: None,
+            length: 42.try_into().unwrap(),
+            path: (0..10)
+                .flat_map(|n| ["scripts".into(), "ai".into(), format!("raees_{n}.py")])
+                .collect(),
+            md5sum: None,
+            sha1: None,
+            symlink_path: None,
+        }
+    }
+
+    #[test]
+    fn yield_one_metav1_de() {
+        let files = LameV1Files {
+            files: MetaV1FileRepr::Single(42.try_into().unwrap()),
+        };
+
+        assert_de_tokens(
+            &files,
+            &[
+                Token::Struct {
+                    name: "LameV1Files",
+                    len: 1,
+                },
+                Token::Str("files"),
+                Token::Enum {
+                    name: "MetaV1FileRepr",
+                },
+                Token::Str("untagged"),
+                Token::Str("length"),
+                Token::U64(42),
+                Token::StructEnd,
+            ],
+        )
+    }
+
+    #[test]
+    fn yield_multi_metav2_de() {
+        let files = LameV1Files {
+            files: MetaV1FileRepr::Multiple((0..10).map(|_| fake_file()).collect()),
+        };
+
+        assert_tokens(
+            &files,
+            &[
+                Token::Struct {
+                    name: "LameV1Files",
+                    len: 1,
+                },
+                Token::Str("files"),
+                Token::Enum {
+                    name: "MetaV1FileRepr"
+                },
+                Token::Str("untagged"),
+                Token::Str("files"),
+                Token::StructEnd,
+            ],
+        );
     }
 }

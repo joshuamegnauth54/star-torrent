@@ -34,6 +34,7 @@ argh = { version = "0.1.9", optional = true }
 arrayvec = { version = "0.7.2", features = ["serde"] }
 color-eyre = { version = "0.6", default-features = false, optional = true }
 crossterm = { version = "0.25", optional = true }
+digest = "0.10"
 either = { version = "1.8", features = ["serde"] }
 http = "0.2.8"
 itertools = "0.10.5"
@@ -44,6 +45,8 @@ serde = { version = "1.0.147", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.7"
 serde_with = "2.0.1"
+sha1 = "0.10"
+sha2 = "0.10"
 tui = { version = "0.19", features = ["crossterm"], optional = true }
 
 [dev-dependencies]

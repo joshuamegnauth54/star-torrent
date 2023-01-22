@@ -1,6 +1,6 @@
 use crate::{
     crypto::{md5::Md5, sha1::Sha1},
-    files::{FileDisplayInfo, FileTree, FlatFile},
+    files::{FileTree, FlatFile},
     metainfo::serde_bool_int::{bool_from_int, bool_to_int},
     pieces::{PieceLength, Pieces},
 };

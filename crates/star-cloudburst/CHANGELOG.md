@@ -3,6 +3,10 @@
 - Reimplement `Node` in terms of `UriWrapper` with non-roundtrip ser/deserialization. This allows for a consistent type instead of having to make a URI for sockets.
 - Switch some of the noisier `debug!` to `trace!`.
 - Improve consistency of `use` statements with respect to `serde::de::Error` and `serde::de::value::Error`. The former should always be aliased as `DeErrorTrait` while the latter should be imported as `DeError`.
+- Implement `MetaV1FileRepr` to represent the two alternative states for meta info v1 torrents. Meta info 1 represents shared files as either a `length` field for a single file or a separate dictionary for each file.
+- Implement `FileDisplayInfo` as a convenient way to extract basic file information regardless of the meta version.
+- Implement `CalculateInfoHash` as a generic trait to calculate info hashes and wrap the result into the crypto types. Add RustCrypto crates for the actual calculations.
+- Rename `Sha256` to `Sha2`.
 
 # 0.7.0
 - Rename `benitor` to `star-torrent` and split out `benitor` into its own repo.

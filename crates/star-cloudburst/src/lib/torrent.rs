@@ -1,12 +1,16 @@
 use crate::{
-    crypto::signature::Signature, hexadecimal::HexBytes, metainfo::MetaInfo,
-    uri::uriwrapper::UriWrapper, uri::Node,
+    crypto::signature::Signature,
+    hexadecimal::HexBytes,
+    metainfo::{InfoHashAny, InfoHashVersioned, MetaInfo},
+    uri::uriwrapper::UriWrapper,
+    uri::Node,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{self, Display, Formatter},
+    sync::Mutex
 };
 
 // Based on BEPs as well as:
@@ -55,6 +59,9 @@ pub struct Torrent {
     /// The info dict contains integral data on the files shared by the torrent.
     /// This includes suggested names as well as file hashes.
     pub info: MetaInfo,
+    /// SHA hash of the torrent's meta info dict.
+    #[serde(skip)]
+    info_hash_internal: Option<Mutex<InfoHashAny>>,
     /// Nodes for distributed hash tables (DHT).
     ///
     /// `nodes` is required for a tracker-less torrent file but optional otherwise.
@@ -97,12 +104,37 @@ impl Torrent {
             MetaInfo::Hybrid(ref dict) => dict.name.as_str(),
         }
     }
+
+    /// Meta info SHA hash.
+    pub fn info_hash(&mut self) -> InfoHashVersioned<'_> {
+        // TODO: I don't like that I have to take a mutable reference to Self.
+        // I can probably get away with a RefCell since I only need to mutate info_hash once.
+        if let Some(info_hash) = &self.info_hash_internal {
+            match self.info {
+                MetaInfo::MetaV1(_) => InfoHashVersioned::V1(&info_hash.sha1),
+                MetaInfo::MetaV2(_) => InfoHashVersioned::V2(&info_hash.sha2),
+                MetaInfo::Hybrid(_) => InfoHashVersioned::Hybrid {
+                    sha1: &info_hash.sha1,
+                    sha2: &info_hash.sha2,
+                },
+            }
+        } else {
+            self.info_hash_internal = Some(InfoHashAny::calculate_infohash(self.info));
+            self.info_hash()
+        }
+    }
 }
 
 impl Display for Torrent {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct(&format!("Torrent: {}", self.name()))
-            .field("Meta Info", &self.info)
+            .field("Meta info version", &self.info.meta_version_str())
+            .field("Files", {
+                let files: Vec<_> = self.info.iter_files().collect();
+                &format!("{files:#?}")
+            })
+            .field("Info hash", self.info_hash())
+            .field("Piece length", &self.info.piece_length())
             .finish()
     }
 }

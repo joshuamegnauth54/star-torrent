@@ -1,6 +1,11 @@
 //! SHA256 hash.
 
-use crate::hexadecimal::HexBytes;
+use super::calculateinfohash::CalculateInfoHash;
+use crate::{hexadecimal::HexBytes, metainfo::MetaInfo};
+use digest::{
+    consts,
+    core_api::{CoreWrapper, CtVariableCoreWrapper},
+};
 use log::{error, trace};
 use serde::{de::Error as DeErrorTrait, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
@@ -12,23 +17,29 @@ const SHA256_LEN: usize = 32;
 ///
 /// This wraps one SHA256 hash: 256 bits (32 bytes)
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub struct Sha256(HexBytes);
+pub struct Sha2(HexBytes);
 
-impl From<[u8; SHA256_LEN]> for Sha256 {
+impl From<[u8; SHA256_LEN]> for Sha2 {
     #[inline]
     fn from(bytes: [u8; SHA256_LEN]) -> Self {
         Self(bytes.into())
     }
 }
 
-impl Display for Sha256 {
+impl CalculateInfoHash<SHA256_LEN> for Sha2 {
+    type Error = serde_bencode::Error;
+    type Info = MetaInfo;
+    type Hasher = CoreWrapper<CtVariableCoreWrapper<sha2::Sha256VarCore, consts::U32>>;
+}
+
+impl Display for Sha2 {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         <HexBytes as Display>::fmt(&self.0, f)
     }
 }
 
-impl<'de> Deserialize<'de> for Sha256 {
+impl<'de> Deserialize<'de> for Sha2 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -46,7 +57,7 @@ impl<'de> Deserialize<'de> for Sha256 {
 
             Err(DeErrorTrait::invalid_length(len, &"32"))
         } else {
-            Ok(Sha256(bytes))
+            Ok(Sha2(bytes))
         }
     }
 }

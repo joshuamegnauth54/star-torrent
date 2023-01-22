@@ -3,7 +3,7 @@
 //! BEPs:
 //! [BEP_0052](https://www.bittorrent.org/beps/bep_0052.html)
 
-use crate::{crypto::sha::Sha256, files::fileattributes::TorrentFileAttributes};
+use crate::{crypto::sha::Sha2, files::fileattributes::TorrentFileAttributes};
 use either::Either;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -35,7 +35,7 @@ pub struct FileTreeInfo {
     pub length: NonZeroU64,
     /// Merkel tree root as a SHA256 hash.
     #[serde(default, rename = "pieces root")]
-    pub pieces_root: Option<Sha256>,
+    pub pieces_root: Option<Sha2>,
 }
 
 /// A file or a directory in version 2 [FileTree]s.

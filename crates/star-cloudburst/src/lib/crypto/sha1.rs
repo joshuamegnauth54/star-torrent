@@ -1,6 +1,8 @@
 //! SHA-1 hash.
 
-use crate::hexadecimal::HexBytes;
+use super::calculateinfohash::CalculateInfoHash;
+use crate::{hexadecimal::HexBytes, metainfo::MetaInfo};
+use digest::core_api::CoreWrapper;
 use log::{debug, error};
 use serde::{de::Error as DeErrorTrait, Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
@@ -20,6 +22,12 @@ impl From<[u8; SHA1_LEN]> for Sha1 {
     fn from(value: [u8; SHA1_LEN]) -> Self {
         Self(value.into())
     }
+}
+
+impl CalculateInfoHash<SHA1_LEN> for Sha1 {
+    type Error = serde_bencode::Error;
+    type Info = MetaInfo;
+    type Hasher = CoreWrapper<sha1::Sha1Core>;
 }
 
 /*
