@@ -7,6 +7,7 @@
 - Implement `FileDisplayInfo` as a convenient way to extract basic file information regardless of the meta version.
 - Implement `CalculateInfoHash` as a generic trait to calculate info hashes and wrap the result into the crypto types. Add RustCrypto crates for the actual calculations.
 - Rename `Sha256` to `Sha2`.
+- Enable `all-features` for building documentation
 
 # 0.7.0
 - Rename `benitor` to `star-torrent` and split out `benitor` into its own repo.

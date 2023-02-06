@@ -1,7 +1,10 @@
 use crate::{
     crypto::signature::Signature,
     hexadecimal::HexBytes,
-    metainfo::{InfoHashAny, InfoHashVersioned, MetaInfo},
+    metainfo::{
+        infohash::{InfoHashAny, InfoHashVersioned},
+        MetaInfo,
+    },
     uri::uriwrapper::UriWrapper,
     uri::Node,
 };
@@ -10,7 +13,7 @@ use serde_with::skip_serializing_none;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{self, Display, Formatter},
-    sync::Mutex
+    sync::Mutex,
 };
 
 // Based on BEPs as well as:

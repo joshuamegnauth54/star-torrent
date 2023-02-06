@@ -9,6 +9,9 @@ license = "MIT"
 keywords = ["torrent", "parse", "cross-platform", "gui", "p2p"]
 categories = ["config", "parsing"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [profile.release]
 strip = true
 lto = true
@@ -19,7 +22,7 @@ members = ["crates/*"]
 [features]
 default = ["gui", "logging"]
 logging = ["dep:log", "dep:pretty_env_logger"]
-gui = ["iced"]
+gui = ["dep:iced"]
 
 [dependencies]
 star-cloudburst = { path = "crates/star-cloudburst" }

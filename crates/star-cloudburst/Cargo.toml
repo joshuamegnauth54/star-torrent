@@ -9,6 +9,9 @@ license = "MIT"
 keywords = ["torrent", "parse", "cross-platform"]
 categories = ["config", "encoding"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [[bin]]
 name = "cloudburst"
 required-features = ["binary"]

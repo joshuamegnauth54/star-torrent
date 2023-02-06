@@ -9,8 +9,16 @@ license = "MIT"
 keywords = ["bencode", "parse", "torrent"]
 categories = ["encoding", "parser-implementations"]
 
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+bigint = ["dep:num-bigint"]
+
 [dependencies]
 nom = "7.1.1"
+num-bigint = { version = "0.4", optional = true }
+num-integer = "0.1.45"
 serde = "1.0.147"
 serde_bytes = "0.11.7"
 thiserror = "1.0"
