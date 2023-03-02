@@ -1,5 +1,5 @@
 //! `star-cloudburst` provides strongly typed data structures for serializing and deserializing torrents.
-#![feature(let_chains)]
+#![feature(let_chains, once_cell)]
 
 pub mod crypto;
 pub mod files;

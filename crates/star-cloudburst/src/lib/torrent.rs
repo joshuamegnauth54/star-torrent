@@ -8,13 +8,17 @@ use crate::{
     uri::uriwrapper::UriWrapper,
     uri::Node,
 };
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{self, Display, Formatter},
-    sync::Mutex,
+    sync::{OnceLock},
 };
+
+// Log target
+const TORRENT_TARGET: &str = "star_cloudburst::Torrent::info_hash";
 
 // Based on BEPs as well as:
 // https://en.wikipedia.org/wiki/Torrent_file#File_structure
@@ -64,7 +68,7 @@ pub struct Torrent {
     pub info: MetaInfo,
     /// SHA hash of the torrent's meta info dict.
     #[serde(skip)]
-    info_hash_internal: Option<Mutex<InfoHashAny>>,
+    info_hash_internal: OnceLock<InfoHashAny>,
     /// Nodes for distributed hash tables (DHT).
     ///
     /// `nodes` is required for a tracker-less torrent file but optional otherwise.
@@ -109,21 +113,27 @@ impl Torrent {
     }
 
     /// Meta info SHA hash.
-    pub fn info_hash(&mut self) -> InfoHashVersioned<'_> {
+    /// This is highly subject to change.
+    pub fn info_hash(&self) -> Result<InfoHashVersioned<'_>, serde_bencode::Error> {
         // TODO: I don't like that I have to take a mutable reference to Self.
         // I can probably get away with a RefCell since I only need to mutate info_hash once.
-        if let Some(info_hash) = &self.info_hash_internal {
+        let info_hash = self.info_hash_internal.get_or_try_init(|| {
+            // Side effect sin.
+            debug!(
+                target: TORRENT_TARGET,
+                "Info hash doesn't exist on {}. Calculating now.",
+                self.name()
+            );
+            InfoHashAny::calculate_infohash(&self.info)
+        })?;
+
             match self.info {
-                MetaInfo::MetaV1(_) => InfoHashVersioned::V1(&info_hash.sha1),
-                MetaInfo::MetaV2(_) => InfoHashVersioned::V2(&info_hash.sha2),
-                MetaInfo::Hybrid(_) => InfoHashVersioned::Hybrid {
+                MetaInfo::MetaV1(_) => Ok(InfoHashVersioned::V1(&info_hash.sha1)),
+                MetaInfo::MetaV2(_) => Ok(InfoHashVersioned::V2(&info_hash.sha2)),
+                MetaInfo::Hybrid(_) => Ok(InfoHashVersioned::Hybrid {
                     sha1: &info_hash.sha1,
                     sha2: &info_hash.sha2,
-                },
-            }
-        } else {
-            self.info_hash_internal = Some(InfoHashAny::calculate_infohash(self.info));
-            self.info_hash()
+                }),
         }
     }
 }
@@ -136,7 +146,7 @@ impl Display for Torrent {
                 let files: Vec<_> = self.info.iter_files().collect();
                 &format!("{files:#?}")
             })
-            .field("Info hash", self.info_hash())
+            .field("Info hash", &self.info_hash())
             .field("Piece length", &self.info.piece_length())
             .finish()
     }

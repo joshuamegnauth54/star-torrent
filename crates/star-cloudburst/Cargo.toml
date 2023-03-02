@@ -33,10 +33,10 @@ binary = [
 ]
 
 [dependencies]
-argh = { version = "0.1.9", optional = true }
+argh = { version = "0.1.10", optional = true }
 arrayvec = { version = "0.7.2", features = ["serde"] }
 color-eyre = { version = "0.6", default-features = false, optional = true }
-crossterm = { version = "0.25", optional = true }
+crossterm = { version = "0.26", optional = true }
 digest = "0.10"
 either = { version = "1.8", features = ["serde"] }
 http = "0.2.8"
@@ -44,13 +44,13 @@ itertools = "0.10.5"
 log = "0.4"
 md-5 = "0.10.5"
 pretty_env_logger = { version = "0.4", optional = true }
-serde = { version = "1.0.147", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 serde_bencode = "0.2.3"
-serde_bytes = "0.11.7"
-serde_with = "2.0.1"
+serde_bytes = "0.11.9"
+serde_with = "2.2.0"
 sha1 = "0.10"
 sha2 = "0.10"
 tui = { version = "0.19", features = ["crossterm"], optional = true }
 
 [dev-dependencies]
-serde_test = "1.0.147"
+serde_test = "1.0.152"
