@@ -5,7 +5,7 @@ use nom::{
     branch::{alt, permutation},
     bytes::complete::tag,
     character::complete::{char, digit1},
-    combinator::{cond, map_res, not, recognize},
+    combinator::{map_res, opt, peek, recognize, verify},
     error::context,
     sequence::{delimited, pair},
     IResult,
@@ -15,45 +15,49 @@ use std::{fmt::Debug, str::FromStr};
 
 /// Parse a Bencoded integer from bytes.
 ///
-/// Integers are always base ten numbers delimited with 'i' and 'e'. For example, the number 14 Bencoded is `i14e`.
-/// Integers are signed; `i-28e` and `i42e` are both valid.
-/// Integers cannot start with a leading 0. `i042e` is invalid as is `i-0e` `i0e` is valid of course.
-/// Per the spec: "Integers have no size limitation"
-/// # Examples
+/// Integers are always base ten numbers delimited with 'i' and 'e'. For
+/// example, the number 14 Bencoded is `i14e`. Integers are signed; `i-28e` and
+/// `i42e` are both valid. Integers cannot start with a leading 0. `i042e` is
+/// invalid as is `i-0e` `i0e` is valid of course. Per the spec: "Integers have
+/// no size limitation" # Examples
 ///
 /// A basic, positive integer.
 ///
 /// ```rust
+/// use nom::Finish;
 /// use star_bert::parser::integer;
 /// use star_bert::parser::BertErrorTrace;
 ///
-/// let (_bytes, num) = integer::<u8>(b"i14e")?;
+/// let (_bytes, num) = integer::<u8>(b"i14e").finish()?;
 /// assert_eq!(num, 14);
-/// # Ok::<(), BertErrorTrace>(())
+/// # Ok::<(), BertErrorTrace<Vec<u8>>>(())
 /// ```
 ///
 /// Negative integer
 /// ```
+/// use nom::Finish;
 /// use star_bert::parser::integer;
 /// use star_bert::parser::BertErrorTrace;
 ///
-/// let (_bytes, num) = integer::<i32>(b"i-28e")?;
+/// let (_bytes, num) = integer::<i32>(b"i-28e").finish()?;
 /// assert_eq!(num, -28);
-/// # Ok::<(), BertErrorTrace>(())
+/// # Ok::<(), BertErrorTrace<Vec<u8>>>(())
 /// ```
 ///
 /// ## Arbitrarily sized integers (BigInt)
-/// The Bencode spec doesn't define the size of integers. In other words, an int isn't a `i64` or any other type.
-/// BigInts can be enabled via the `bigint` feature which is disabled by default.
+/// The Bencode spec doesn't define the size of integers. In other words, an int
+/// isn't a `i64` or any other type. BigInts can be enabled via the `bigint`
+/// feature which is disabled by default.
 ///
 /// ```
+/// use nom::Finish;
+/// use num_bigint::{BigInt, ToBigInt};
 /// use star_bert::parser::integer;
 /// use star_bert::parser::BertErrorTrace;
-/// use num_bigint::BigInt;
 ///
 /// let big_num = format!("i{}e", u128::MAX.to_bigint().unwrap() + 1);
-/// let mun_gib = integer::<BigInt>(big_num.as_bytes())?;
-/// # Ok::<(), BertErrorTrace>(())
+/// let mun_gib = integer::<BigInt>(big_num.as_bytes()).finish()?;
+/// # Ok::<(), BertErrorTrace<Vec<u8>>>(())
 /// ```
 // #[inline]
 pub fn integer<N>(input: &[u8]) -> IResult<&[u8], N, BertErrorTrace<&[u8]>>
@@ -68,38 +72,41 @@ where
                 // Opening delimiter
                 tag("i"),
                 // Only parse the digits if the input is not -0\d{0,} or 0\d{1,}
-                cond(
-                    permutation::<_, _, BertErrorTrace<&[u8]>, _>((
-                        // -0 is invalid. It doesn't matter what follows -0 as long as -0 matches.
-                        // -0 is invalid thus if the input is only -0 then the parser should reject it.
-                        // -01428 is invalid because of the leading 0 so the parser should reject the input as well.
-                        not(tag("-0")),
-                        // This case handles a preceding 0. I call digit1 because digit0 would pass for `i0e` which is incorrect.
-                        not(pair(char('0'), digit1)),
-                    ))(input)
-                    .is_ok(),
-                    // If the condition holds, match either a positive integer (digit1) or a negative
-                    // `recognize` returns the consumed input as the result rather than tuples of `pair`
+                permutation((
+                    // -0 is invalid. It doesn't matter what follows -0 as long as -0 matches.
+                    // -0 is invalid thus if the input is only -0 then the parser should reject it.
+                    // -01428 is invalid because of the leading 0 so the parser should reject the
+                    // input as well.
+                    context(
+                        "BEP-0003 forbids `i-0e` or `-0`",
+                        verify(peek(tag("-0")), |_: &[u8]| false),
+                    ),
+                    // This case handles a preceding 0. I call digit1 because digit0 would reject
+                    // `i0e` which is incorrect.
+                    context(
+                        "BEP-0003 forbids leading zeroes",
+                        verify(opt(peek(pair(char::<&[u8], _>('0'), digit1))), |digits| {
+                            digits.map_or(true, |(_zero, digits)| digits.is_empty())
+                        }),
+                    ),
+                    // If the condition holds, match either a positive integer (digit1) or a
+                    // negative `recognize` returns the consumed input as the
+                    // result rather than tuples of `pair`
                     alt((digit1, recognize(pair(char('-'), digit1)))),
-                ),
+                )),
                 // Closing delimiter
                 tag("e"),
             ),
             // Map the result to N, the integer output
-            |maybe_num| {
-                maybe_num
-                    .ok_or(BertErrorKind::Context(
-                        "-0 or leading zeroes is invalid Bencode",
-                    ))
-                    .and_then(bytes_to_str_to_int)
-            },
+            |(_, _, maybe_num)| bytes_to_str_to_int(maybe_num),
         ),
     )(input)
 }
 
 // Helper functions
 /// Parse a [u8] slice to [str] and then to impl [Integer].
-/// Returns [BertErrorKind] so that [nom::combinator::map_res] may call [nom::error::FromExternalError] to convert the type into [BertErrorTrace].
+/// Returns [BertErrorKind] so that [nom::combinator::map_res] may call
+/// [nom::error::FromExternalError] to convert the type into [BertErrorTrace].
 #[inline]
 fn bytes_to_str_to_int<N>(bytes: &[u8]) -> Result<N, BertErrorKind>
 where
@@ -137,6 +144,13 @@ mod tests {
     fn leading_zero_fails() {
         let (_bytes, _num): (&[u8], i32) = integer(b"i014e")
             .expect("This should panic because integers with leading zeroes are invalid.");
+    }
+
+    #[test]
+    fn zero() -> Result<(), BertErrorTrace<Vec<u8>>> {
+        let (_bytes, num) = integer::<i32>(b"i0e").finish()?;
+        assert_eq!(num, 0);
+        Ok(())
     }
 
     #[test]

@@ -1,0 +1,7 @@
+# Use unstable formatters for doc tests and comments
+unstable_features = true
+format_code_in_doc_comments = true
+wrap_comments = true
+
+# git converts line endings to '\n' anyway. Might as well let rustfmt do it.
+newline_style = "Unix"
