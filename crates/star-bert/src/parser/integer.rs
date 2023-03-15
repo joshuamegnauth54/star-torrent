@@ -2,12 +2,12 @@
 
 use super::parser_error::{BertErrorKind, BertErrorTrace};
 use nom::{
-    branch::{alt, permutation},
+    branch::alt,
     bytes::complete::tag,
     character::complete::{char, digit1},
     combinator::{map_res, opt, peek, recognize, verify},
     error::context,
-    sequence::{delimited, pair},
+    sequence::{delimited, pair, tuple},
     IResult,
 };
 use num_integer::Integer;
@@ -16,10 +16,14 @@ use std::{fmt::Debug, str::FromStr};
 /// Parse a Bencoded integer from bytes.
 ///
 /// Integers are always base ten numbers delimited with 'i' and 'e'. For
-/// example, the number 14 Bencoded is `i14e`. Integers are signed; `i-28e` and
-/// `i42e` are both valid. Integers cannot start with a leading 0. `i042e` is
-/// invalid as is `i-0e` `i0e` is valid of course. Per the spec: "Integers have
-/// no size limitation" # Examples
+/// example, the number 14 Bencoded is `i14e`.
+/// Integers are signed; `i-28e` and `i42e` are both valid.
+/// Integers cannot start with a leading 0. `i042e` is invalid as is `i-0e`.
+/// `i0e`, or 0, is valid of course.
+/// Per the spec: "Integers have no size limitation"
+/// Variable precision ints are implicitly allowed
+///
+/// # Examples
 ///
 /// A basic, positive integer.
 ///
@@ -66,32 +70,40 @@ where
     <N as FromStr>::Err: Debug + Into<BertErrorKind>,
 {
     context(
-        "arbitrary precision integer",
+        "[Parse] Arbitrary precision integer",
         map_res(
             delimited(
                 // Opening delimiter
                 tag("i"),
                 // Only parse the digits if the input is not -0\d{0,} or 0\d{1,}
-                permutation((
+                // NOTE: I used `tuple` instead of `permutation` due to this line in the
+                // documentation: "The parsers are applied greedily: if there are
+                // multiple unapplied parsers that could parse the next slice of input, the first
+                // one is used."
+                // Permuting causes the checks to fail after the integer is parsed because the
+                // input has already been consumed.
+                tuple((
                     // -0 is invalid. It doesn't matter what follows -0 as long as -0 matches.
-                    // -0 is invalid thus if the input is only -0 then the parser should reject it.
+                    // In other words:
+                    // -0 is invalid thus if the input is only -0 then the parser should reject it
                     // -01428 is invalid because of the leading 0 so the parser should reject the
                     // input as well.
                     context(
-                        "BEP-0003 forbids `i-0e` or `-0`",
-                        verify(peek(tag("-0")), |_: &[u8]| false),
+                        "[Check] BEP-0003 forbids `i-0e` or `-0`",
+                        verify(opt(peek(tag("-0"))), Option::is_none),
                     ),
                     // This case handles a preceding 0. I call digit1 because digit0 would reject
                     // `i0e` which is incorrect.
                     context(
-                        "BEP-0003 forbids leading zeroes",
-                        verify(opt(peek(pair(char::<&[u8], _>('0'), digit1))), |digits| {
-                            digits.map_or(true, |(_zero, digits)| digits.is_empty())
-                        }),
+                        "[Check] BEP-0003 forbids leading zeroes",
+                        verify(
+                            opt(peek(pair(char::<&[u8], _>('0'), digit1))),
+                            Option::is_none,
+                        ),
                     ),
                     // If the condition holds, match either a positive integer (digit1) or a
-                    // negative `recognize` returns the consumed input as the
-                    // result rather than tuples of `pair`
+                    // negative (the second parser) `recognize` returns the
+                    // consumed input as the result rather than tuples of `pair`
                     alt((digit1, recognize(pair(char('-'), digit1)))),
                 )),
                 // Closing delimiter
