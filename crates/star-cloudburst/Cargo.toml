@@ -2,7 +2,7 @@
 name = "star-cloudburst"
 description = "Torrent serializer and deserializer built on top of Serde for Star Torrent."
 authors = ["Joshua Megnauth <>"]
-version = "0.7.0"
+version = "0.9.0"
 edition = "2021"
 repository = "https://github.com/joshuamegnauth54/star-torrent/"
 license = "MIT"
@@ -39,18 +39,20 @@ color-eyre = { version = "0.6", default-features = false, optional = true }
 crossterm = { version = "0.26", optional = true }
 digest = "0.10"
 either = { version = "1.8", features = ["serde"] }
-http = "0.2.8"
+http = "0.2.9"
 itertools = "0.10.5"
 log = "0.4"
 md-5 = "0.10.5"
 pretty_env_logger = { version = "0.4", optional = true }
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.158", features = ["derive"] }
 serde_bencode = "0.2.3"
 serde_bytes = "0.11.9"
-serde_with = "2.2.0"
+serde_with = "2.3.1"
 sha1 = "0.10"
 sha2 = "0.10"
-tui = { version = "0.19", features = ["crossterm"], optional = true }
+tui = { version = "0.20", package = "ratatui", features = [
+    "crossterm",
+], optional = true }
 
 [dev-dependencies]
-serde_test = "1.0.152"
+serde_test = "1.0.158"

@@ -22,8 +22,9 @@ pub(crate) trait CalculateInfoHash<const HASHSIZE: usize> {
             target: CALCULATEINFOHASH_TARGET,
             "Calculating an info hash; expected length {HASHSIZE}."
         );
-        // Serialize info dict into a String because info hashes are calculated from Bencoded info dicts.
-        let info_se = serde_bencode::to_string(info).map_err(|e| SerError::custom(e))?;
+        // Serialize info dict into a String because info hashes are calculated from
+        // Bencoded info dicts.
+        let info_se = serde_bencode::to_string(info).map_err(SerError::custom)?;
 
         // Hash the info dict String into whatever digest is specified (i.e. SHA-2)
         let mut hasher: Self::Hasher = Digest::new();

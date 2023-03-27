@@ -1,9 +1,10 @@
 //! Type safe torrent file attributes.
 //!
 //! [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html) defines extra metadata for torrent files.
-//! One of these additions is `attr`, a variable length string that lists the attributes of a file.
-//! [FileAttribute] wraps the individual attributes while [TorrentFileAttributes] wraps the string.
-//! Both of these types verify the input as well as provide serialization.
+//! One of these additions is `attr`, a variable length string that lists the
+//! attributes of a file. [FileAttribute] wraps the individual attributes while
+//! [TorrentFileAttributes] wraps the string. Both of these types verify the
+//! input as well as provide serialization.
 
 // Using ArrayVec: https://nnethercote.github.io/perf-book/heap-allocations.html
 use arrayvec::ArrayVec;
@@ -28,7 +29,8 @@ const FILE_ATTRIBUTE_EXPECTED: [&str; 4] = ["x", "h", "p", "l"];
 /// Symlink = 'l'
 ///
 /// Extended file properties are defined in [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html).
-/// Counter to the spec, conversions from [char] and [str] slices are currently fallible. However this may change in the future.
+/// Counter to the spec, conversions from [char] and [str] slices are currently
+/// fallible. However this may change in the future.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileAttribute {
     Executable,
@@ -115,15 +117,16 @@ impl<'de> Deserialize<'de> for FileAttribute {
 /// Multiple [FileAttribute]`s wrapped for serialization and deserialization.
 ///
 /// The `attr` field is stored as a bencoded string as per [BEP-047](https://www.bittorrent.org/beps/bep_0047.html).
-/// [TorrentFileAttributes] wraps an implemention defined vector (currently an [ArrayVec]) of [FileAttribute]s that deserializes
-/// to and serializes from a [String].
+/// [TorrentFileAttributes] wraps an implemention defined vector (currently an
+/// [ArrayVec]) of [FileAttribute]s that deserializes to and serializes from a
+/// [String].
 ///
 /// # Examples
 /// Deserialize to a strongly typed `struct` and back to a [String].
 /// ```
-/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::{Deserialize, Serialize};
 /// use serde_bencode::Error;
+/// use star_cloudburst::files::TorrentFileAttributes;
 ///
 /// let attrs = "2:lx";
 /// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
@@ -134,9 +137,9 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// Deserialization drops duplicates and sorts the result.
 /// ```
-/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::Deserialize;
 /// use serde_bencode::Error;
+/// use star_cloudburst::files::TorrentFileAttributes;
 ///
 /// let attrs = "23:plxhhxXpPxlLxpphXXXhlLL";
 /// let torrent_attrs: TorrentFileAttributes = serde_bencode::from_str(attrs)?;
@@ -146,8 +149,8 @@ impl<'de> Deserialize<'de> for FileAttribute {
 ///
 /// [TryFrom] is implemented for [TorrentFileAttributes].
 /// ```
-/// use star_cloudburst::files::TorrentFileAttributes;
 /// use serde::de::value::Error;
+/// use star_cloudburst::files::TorrentFileAttributes;
 ///
 /// let attrs = "hlpx";
 /// let torrent_attrs: TorrentFileAttributes = attrs.try_into()?;
@@ -165,20 +168,21 @@ impl Display for TorrentFileAttributes {
             .cloned()
             .map(<FileAttribute as Into<&str>>::into)
             .collect();
-        write!(f, "{}", attrs)
+        write!(f, "{attrs}")
     }
 }
 
 impl TryFrom<&str> for TorrentFileAttributes {
     type Error = DeError;
 
-    // Convert a &str containing any case insensitive combination of 'x', 'h', 'p', 'l'
-    // to a vector of [FileAttribute].
+    // Convert a &str containing any case insensitive combination of 'x', 'h', 'p',
+    // 'l' to a vector of [FileAttribute].
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let attrs_parsed = value
             .chars()
             .map(|ch| ch.to_ascii_lowercase())
-            // Sort so that I could potentially intern the Strings produced during deserialization in the future.
+            // Sort so that I could potentially intern the Strings produced during deserialization
+            // in the future.
             .sorted()
             // Dedup for the same reason as sorting - plus there is no reason for dupes here.
             .dedup()

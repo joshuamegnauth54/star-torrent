@@ -1,3 +1,6 @@
+# 0.9.0
+- Replace [tui](https://github.com/fdehau/tui-rs) with [ratatui](https://github.com/tui-rs-revival/ratatui) - a maintained fork.
+
 # 0.8.0
 - Refactor into a more modularized style instead of re-exporting everything.
 - Reimplement `Node` in terms of `UriWrapper` with non-roundtrip ser/deserialization. This allows for a consistent type instead of having to make a URI for sockets.

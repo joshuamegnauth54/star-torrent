@@ -1,4 +1,6 @@
-//! Recursive descent Bencode parser.
+//! Parse arbitrarily sized Bencoded integers.
+//!
+//! [BEP-0003](https://www.bittorrent.org/beps/bep_0003.html)
 
 use super::parser_error::{BertErrorKind, BertErrorTrace};
 use nom::{
@@ -70,7 +72,7 @@ where
     <N as FromStr>::Err: Debug + Into<BertErrorKind>,
 {
     context(
-        "[Parse] Arbitrary precision integer",
+        "[Parse] {integer} Arbitrary precision integer",
         map_res(
             delimited(
                 // Opening delimiter
@@ -89,13 +91,13 @@ where
                     // -01428 is invalid because of the leading 0 so the parser should reject the
                     // input as well.
                     context(
-                        "[Check] BEP-0003 forbids `i-0e` or `-0`",
+                        "[Check] {integer} BEP-0003 forbids `i-0e` or `-0`",
                         verify(opt(peek(tag("-0"))), Option::is_none),
                     ),
                     // This case handles a preceding 0. I call digit1 because digit0 would reject
                     // `i0e` which is incorrect.
                     context(
-                        "[Check] BEP-0003 forbids leading zeroes",
+                        "[Check] {integer} BEP-0003 forbids leading zeroes",
                         verify(
                             opt(peek(pair(char::<&[u8], _>('0'), digit1))),
                             Option::is_none,
@@ -120,7 +122,7 @@ where
 /// Returns [BertErrorKind] so that [nom::combinator::map_res] may call
 /// [nom::error::FromExternalError] to convert the type into [BertErrorTrace].
 #[inline]
-fn bytes_to_str_to_int<N>(bytes: &[u8]) -> Result<N, BertErrorKind>
+pub(super) fn bytes_to_str_to_int<N>(bytes: &[u8]) -> Result<N, BertErrorKind>
 where
     N: Integer + FromStr,
     <N as FromStr>::Err: Debug + Into<BertErrorKind>,

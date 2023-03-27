@@ -35,12 +35,13 @@ pub struct HexBytes {
 impl HexBytes {
     /// Validate byte slice as valid hexadecimal (case insensitive).
     ///
-    /// [Display], [Binary], [UpperHex], and [LowerHex] are implemented for [HexBytes].
+    /// [Display], [Binary], [UpperHex], and [LowerHex] are implemented for
+    /// [HexBytes].
     ///
     /// # Examples
     /// ```
-    /// use star_cloudburst::hexadecimal::HexBytes;
     /// use serde::de::value::Error;
+    /// use star_cloudburst::hexadecimal::HexBytes;
     ///
     /// let james_hoffman = "cafeD00d";
     /// let coffee_hex = HexBytes::from_hex_str(james_hoffman)?;
@@ -111,15 +112,16 @@ impl HexBytes {
 
     #[inline]
     pub(crate) fn new(bytes: ByteBuf) -> Self {
-        // For some reason, probably due to my own idiocy, I can't use Into to construct HexBytes.
+        // For some reason, probably due to my own idiocy, I can't use Into to construct
+        // HexBytes.
         Self { bytes }
     }
 
     /// Returns the amount of bytes stored.
     ///
     /// ```rust
-    /// use star_cloudburst::hexadecimal::HexBytes;
     /// use serde::de::value::Error;
+    /// use star_cloudburst::hexadecimal::HexBytes;
     ///
     /// let bytes = HexBytes::from_hex_str("dead")?;
     /// assert_eq!(bytes.len(), 2);
@@ -173,11 +175,12 @@ where
     }
 }
 
-// Bytes are assumed to be packed hexadecimal which is fine because I check it anyway.
+// Bytes are assumed to be packed hexadecimal which is fine because I check it
+// anyway.
 impl Display for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for &byte in self.bytes.iter() {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
 
         Ok(())
@@ -200,7 +203,7 @@ impl LowerHex for HexBytes {
         let (width, precision) = self.hex_display_proxy(f)?;
 
         for byte in self.bytes.iter() {
-            write!(f, "{:0width$.precision$x}", byte)?;
+            write!(f, "{byte:0width$.precision$x}")?;
         }
 
         Ok(())
@@ -212,7 +215,7 @@ impl UpperHex for HexBytes {
         let (width, precision) = self.hex_display_proxy(f)?;
 
         for &byte in self.bytes.iter() {
-            write!(f, "{:0width$.precision$X}", byte)?;
+            write!(f, "{byte:0width$.precision$X}")?;
         }
 
         Ok(())
