@@ -38,14 +38,48 @@ pub fn bytes(input: &[u8]) -> IResult<&[u8], &[u8], BertErrorTrace<&[u8]>> {
     )(input)
 }
 
-pub fn to_utf8(input: &[u8]) -> Result<&str, BertErrorTrace<&[u8]>> {
-
-}
-
 #[cfg(test)]
 mod tests {
     use crate::parser::{bytes, BertErrorTrace};
-    use nom::{error::ErrorKind, error::FromExternalError, Finish};
+    use nom::Finish;
+
+    // Success case
+    #[test]
+    fn bytes_to_str_success() -> Result<(), BertErrorTrace<Vec<u8>>> {
+        // Cats are cute.
+        let cats = "14:A cicák cukik";
+        let bytes_str = cats.as_bytes();
+        let (remaining, cat_parsed_bytes) = bytes(bytes_str).finish()?;
+
+        // Check if the bytes were parsed properly
+        assert_eq!(remaining.len(), 0);
+        let cats_parsed = std::str::from_utf8(cat_parsed_bytes)
+            .map_err(|e| BertErrorTrace::from_bert_error_kind(cat_parsed_bytes, e.into()))?;
+        assert!(cats.chars().skip(3).eq(cats_parsed.chars()));
+
+        Ok(())
+    }
+
+    // Incorrect delimiter
+    #[test]
+    #[should_panic(expected = "")]
+    fn missing_colon() {
+        let bytes_str = "46;fekete bika pata kopog a patika pepita kövein".as_bytes();
+        bytes(bytes_str).unwrap();
+    }
+
+    // Zero length bytes array
+    #[test]
+    fn zero_length_bytes_array() -> Result<(), BertErrorTrace<Vec<u8>>> {
+        let bytes_str = b"0:";
+        let (remaining, parsed_bytes) = bytes(bytes_str).finish()?;
+
+        // Check that both remaining and parsed_bytes are empty.
+        assert_eq!(remaining.len(), 0);
+        assert_eq!(parsed_bytes.len(), 0);
+
+        Ok(())
+    }
 
     // Try to take 42 bytes from an bytes array which is only 32 bytes long.
     #[test]
@@ -63,15 +97,35 @@ mod tests {
     fn length_too_small() -> Result<(), BertErrorTrace<Vec<u8>>> {
         // Cabbaging hm hm.
         let bytes_str =
-            "24:Elkelkáposztásíthatatlanságoskodásaitokért kivégezlek titeket".as_bytes();
-        assert_ne!(24, bytes_str.len());
+            "48:Elkelkáposztásíthatatlanságoskodásaitokért kivégezlek titeket".as_bytes();
+        assert_ne!(48, bytes_str.len());
 
         // Parse 48 bytes.
-        let (_remaining, parsed_bytes) = bytes(bytes_str).finish()?;
+        let (remaining, parsed_bytes) = bytes(bytes_str).finish()?;
+
+        // Check that parsed bytes were parsed properly
         assert_eq!(parsed_bytes.len(), 48);
         let parsed_str = std::str::from_utf8(parsed_bytes)
-            .map_err(|e| BertErrorTrace::from_external_error(parsed_bytes, ErrorKind::MapRes, e))?;
+            .map_err(|e| BertErrorTrace::from_bert_error_kind(parsed_bytes, e.into()))?;
         assert_eq!(parsed_str, "Elkelkáposztásíthatatlanságoskodásaitokért");
+
+        // Check that the remaining bytes array is the correct length
+        assert_eq!(remaining.len(), 20);
+
+        Ok(())
+    }
+
+    // A bytes array of null characters.
+    #[test]
+    fn null_bytes() -> Result<(), BertErrorTrace<Vec<u8>>> {
+        let bytes_str = b"4:\x00\x00\x00\x00";
+        let (remaining, parsed_bytes) = bytes(bytes_str).finish()?;
+
+        // Check that bytes were parsed correctly
+        assert_eq!(remaining.len(), 0);
+        let parsed_str = std::str::from_utf8(parsed_bytes)
+            .map_err(|e| BertErrorTrace::from_bert_error_kind(parsed_bytes, e.into()))?;
+        assert_eq!(parsed_str, "\x00\x00\x00\x00");
 
         Ok(())
     }

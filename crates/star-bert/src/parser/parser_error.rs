@@ -55,6 +55,20 @@ impl<I> ParseError<I> for BertErrorTrace<I> {
     }
 }
 
+impl<I> BertErrorTrace<I> {
+    pub fn from_bert_error_kind(input: I, kind: BertErrorKind) -> Self {
+        Self {
+            sources: vec![
+                BertError {
+                    input,
+                    source: kind
+                }
+            ]
+        }
+    }
+
+}
+
 impl<I, E> FromExternalError<I, E> for BertErrorTrace<I>
 where
     E: Into<BertErrorKind>,
