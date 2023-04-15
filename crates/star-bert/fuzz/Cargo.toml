@@ -1,0 +1,28 @@
+[package]
+name = "star-bert-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+
+[dependencies.star-bert]
+path = ".."
+features = ["biginit", "serde"]
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_string"
+path = "fuzz_targets/fuzz_string.rs"
+test = false
+doc = false

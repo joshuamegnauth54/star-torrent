@@ -56,6 +56,8 @@ impl<I> ParseError<I> for BertErrorTrace<I> {
 }
 
 impl<I> BertErrorTrace<I> {
+    /// Construct a [BertErrorTrace] from a [BertErrorKind].
+    #[inline]
     pub fn from_bert_error_kind(input: I, kind: BertErrorKind) -> Self {
         Self {
             sources: vec![
@@ -74,6 +76,7 @@ where
     E: Into<BertErrorKind>,
     I: Clone,
 {
+    #[inline]
     fn from_external_error(input: I, kind: ErrorKind, e: E) -> Self {
         Self {
             sources: vec![

@@ -9,4 +9,6 @@
 
 # Similar projects
 - [bendy](https://github.com/P3KI/bendy): Bencode marshalling that focusses on correctness.
-- [serde-bencode](https://github.com/toby/serde-bencode): Unmaintained
+- [intermodal](https://github.com/casey/intermodal): Torrent file suite.
+- [rqbit](https://github.com/ikatson/rqbit): BitTorrent client written in Rust. Uses its own Bencode parser.
+- [serde-bencode](https://github.com/toby/serde-bencode): Bencode deserializer that uses Serde. Unmaintained.
